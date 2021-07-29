@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	database3 "github.com/foxfurry/simple-rest/internal/infrastructure/database"
+	dbpool "github.com/foxfurry/simple-rest/internal/infrastructure/database"
 	"log"
 	"net/http"
 
@@ -12,20 +12,20 @@ import (
 	"github.com/spf13/viper"
 )
 
-const(
+const (
 	configFilePathUsage = "Config file directory. Config must be of name 'conv_{env}.yaml'."
 	configDefaultPath   = "./configs"
 	configFileFlagName  = "configFilePath"
 
-	envUsage              = "Environment for dev, prod or test."
-	envDefault            = "dev"
-	envFlagName           = "env"
+	envUsage    = "Environment for dev, prod or test."
+	envDefault  = "dev"
+	envFlagName = "env"
 )
 
 type app struct {
 	*http.Server
 	router *mux.Router
-	db *sql.DB
+	database *sql.DB
 }
 
 var configFilePath string
@@ -34,27 +34,25 @@ var env string
 func NewApp() *app {
 	config()
 
-	newR := mux.NewRouter()
-	database := database3.CreateDBpool(
-		viper.GetString("database.URL"),
-		viper.GetInt("database.maxIdleConnections"),
-		viper.GetInt("database.maxOpenConnections"),
-		viper.GetDuration("database.maxConnIdleTime"),
-		)
-
 	newApp := &app{
-		router: newR,
-		db:     database,
+		router: mux.NewRouter(),
 	}
 
 	return newApp
 }
 
 func (a *app) Start() {
-	log.Fatal(http.ListenAndServe(viper.GetString("server.port"),a.router))
+	log.Fatal(http.ListenAndServe(viper.GetString("server.port"), a.router))
 }
 
 func config() {
+	dbpool.ConfigDBPool(
+		viper.GetString("database.URL"),
+		viper.GetInt("database.maxIdleConnections"),
+		viper.GetInt("database.maxOpenConnections"),
+		viper.GetDuration("database.maxConnIdleTime"),
+	)
+
 	flag.StringVar(&configFilePath, configFileFlagName, configDefaultPath, configFilePathUsage)
 	flag.StringVar(&env, envFlagName, envDefault, envUsage)
 	yamlConfig(configFilePath, env)
@@ -78,13 +76,13 @@ func yamlConfig(path string, env string) {
 	}
 }
 
-func showRoutes(r *mux.Router){
+func showRoutes(r *mux.Router) {
 	log.Println("Registered routes:")
 
-	walkFunc := func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error{
+	walkFunc := func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		path, errPath := route.GetPathTemplate()
 		method, errMethod := route.GetMethods()
-		if errPath!=nil && errMethod!=nil {
+		if errPath != nil && errMethod != nil {
 			return fmt.Errorf("Error reading path or methods: %v %v", errPath, errMethod)
 		} else {
 			log.Printf("%s %+v", path, method)
