@@ -1,0 +1,8 @@
+server:
+  port: :8080
+
+database:
+  URL: postgres://bookmanager@localhost:5432/bookstore
+  maxIdleConnections: 5
+  maxOpenConnections: 10
+  maxConnIdleTime: 60s
