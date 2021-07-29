@@ -11,6 +11,10 @@ type BookRepo struct{
 	database *sql.DB
 }
 
+func NewBookRepo(db *sql.DB) BookRepo{
+	return BookRepo{database: db}
+}
+
 var _ repository.BookRepository = &BookRepo{}
 
 func (r *BookRepo) SaveBook(book *entity.Book) (*entity.Book, error) {

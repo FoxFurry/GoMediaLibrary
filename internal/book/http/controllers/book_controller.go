@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/foxfurry/simple-rest/models"
+	bookDB "github.com/foxfurry/simple-rest/internal/book/db"
+	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -15,15 +17,34 @@ type response struct {
 	Message string `json:"message,omitempty"`
 }
 
-func checkDatabase() {
-	db := models.GetDB()
+type BookApp struct {
+	repository bookDB.BookRepo
+}
 
-	err := db.Ping()
-	if err != nil {
-		panic(err)
+func NewBookApp(db *sql.DB) BookApp{
+	return BookApp{
+		repository: bookDB.NewBookRepo(db),
 	}
+}
 
-	log.Println("Succesfully connected to database")
+func (b *BookApp) SaveBook(book *entity.Book) (*entity.Book, error){
+
+}
+
+func (b *BookApp) GetBook(uint64) (*entity.Book, error){
+
+}
+
+func (b *BookApp) GetAllBooks() ([]entity.Book, error){
+
+}
+
+func (b *BookApp) SearchByAuthor(author string) ([]entity.Book, error){
+
+}
+
+func (b *BookApp) SearchByTitle(title string) (*entity.Book, error){
+
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
@@ -32,15 +53,15 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	var user usermodel.User
+	var book entity.Book
 
-	err := json.NewDecoder(r.Body).Decode(&user)
+	err := json.NewDecoder(r.Body).Decode(&book)
 
 	if err != nil {
 		log.Fatalf("Unable to decode the request body: %v\n", err)
 	}
 
-	insertID := usermodel.InsertUser(user)
+	insertID :=
 
 	res := response{
 		ID:      insertID,
