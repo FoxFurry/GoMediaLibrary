@@ -2,7 +2,9 @@ server:
   port: :8080
 
 database:
-  URL: postgres://bookmanager:12345678@localhost:5432/bookstore?sslmode=disable
+  URL: postgres://postgres:postgres@localhost:5432?sslmode=disable
+  database: postgres://postgres:postgres@localhost:5432/medialibrary?sslmode=disable
+  initTable: sql/init_table.sql
   maxIdleConnections: 5
   maxOpenConnections: 10
   maxConnIdleTime: 60s

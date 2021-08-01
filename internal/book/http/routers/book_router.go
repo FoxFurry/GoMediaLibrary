@@ -13,6 +13,6 @@ func RegisterBookRoutes(mainApp *app.App){
 	mainApp.Router.HandleFunc("/api/book/{id}", bookRepo.GetBook).Methods("GET", "OPTIONS")
 	mainApp.Router.HandleFunc("/api/book", bookRepo.GetAllBooks).Methods("GET", "OPTIONS")
 
-	mainApp.Router.HandleFunc("/api/newuser", bookRepo.SaveBook).Methods("POST", "OPTIONS")
+	mainApp.Router.HandleFunc("/api/book", bookRepo.SaveBook).Methods("POST", "OPTIONS")
 
 }

@@ -46,6 +46,8 @@ func config() {
 
 	dbpool.ConfigDBPool(
 		viper.GetString("Database.URL"),
+		viper.GetString("Database.database"),
+		viper.GetString("Database.initTable"),
 		viper.GetInt("Database.maxIdleConnections"),
 		viper.GetInt("Database.maxOpenConnections"),
 		viper.GetDuration("Database.maxConnIdleTime"),
