@@ -1,16 +1,18 @@
 package routers
 
 import (
-	"github.com/gorilla/mux"
+	"github.com/foxfurry/simple-rest/app"
+	"github.com/foxfurry/simple-rest/internal/book/http/controllers"
 )
 
-func RegisterBookRoutes(router *mux.Router){
+func RegisterBookRoutes(mainApp *app.App){
+	bookRepo := controllers.NewBookApp(mainApp.Database)
 
-	router.HandleFunc("/api/book/{id}", handlers.GetUser).Methods("GET", "OPTIONS")
-	router.HandleFunc("/api/book", handlers.GetAllUsers).Methods("GET", "OPTIONS")
-	router.HandleFunc("/api/newuser", handlers.CreateUser).Methods("POST", "OPTIONS")
-	router.HandleFunc("/api/book/{id}", handlers.UpdateUser).Methods("PUT", "OPTIONS")
-	router.HandleFunc("/api/deleteuser/{id}", handlers.DeleteUser).Methods("DELETE", "OPTIONS")
+	mainApp.Router.HandleFunc("/api/book/author={author}", bookRepo.SearchByAuthor).Methods("GET", "OPTIONS")
+	mainApp.Router.HandleFunc("/api/book/title={title}", bookRepo.SearchByTitle).Methods("GET", "OPTIONS")
+	mainApp.Router.HandleFunc("/api/book/{id}", bookRepo.GetBook).Methods("GET", "OPTIONS")
+	mainApp.Router.HandleFunc("/api/book", bookRepo.GetAllBooks).Methods("GET", "OPTIONS")
 
-	return router
+	mainApp.Router.HandleFunc("/api/newuser", bookRepo.SaveBook).Methods("POST", "OPTIONS")
+
 }

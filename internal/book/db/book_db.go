@@ -7,17 +7,17 @@ import (
 	"log"
 )
 
-type BookRepo struct{
+type BookDBRepository struct{
 	database *sql.DB
 }
 
-func NewBookRepo(db *sql.DB) BookRepo{
-	return BookRepo{database: db}
+func NewBookRepo(db *sql.DB) BookDBRepository {
+	return BookDBRepository{database: db}
 }
 
-var _ repository.BookRepository = &BookRepo{}
+var _ repository.BookRepository = &BookDBRepository{}
 
-func (r *BookRepo) SaveBook(book *entity.Book) (*entity.Book, error) {
+func (r *BookDBRepository) SaveBook(book *entity.Book) (*entity.Book, error) {
 	query := `INSERT INTO bookstore (title, author, year, description) VALUES ($1, $2, $3, $4) RETURNING id`
 
 	var bookID uint64
@@ -34,7 +34,7 @@ func (r *BookRepo) SaveBook(book *entity.Book) (*entity.Book, error) {
 	return book, nil
 }
 
-func (r *BookRepo) GetBook(bookID uint64) (*entity.Book, error) {
+func (r *BookDBRepository) GetBook(bookID uint64) (*entity.Book, error) {
 	var book entity.Book
 
 	query := `SELECT * FROM bookstore WHERE id=$1`
@@ -55,7 +55,7 @@ func (r *BookRepo) GetBook(bookID uint64) (*entity.Book, error) {
 	}
 }
 
-func (r *BookRepo) GetAllBooks() ([]entity.Book, error) {
+func (r *BookDBRepository) GetAllBooks() ([]entity.Book, error) {
 	var books []entity.Book
 
 	query := `SELECT * FROM bookstore`
@@ -83,7 +83,7 @@ func (r *BookRepo) GetAllBooks() ([]entity.Book, error) {
 	return books, nil
 }
 
-func (r *BookRepo) SearchByAuthor(author string) ([]entity.Book, error) {
+func (r *BookDBRepository) SearchByAuthor(author string) ([]entity.Book, error) {
 	var books []entity.Book
 
 	query := `SELECT * FROM bookstore WHERE author=$1`
@@ -113,7 +113,7 @@ func (r *BookRepo) SearchByAuthor(author string) ([]entity.Book, error) {
 	return books, nil
 }
 
-func (r *BookRepo) SearchByTitle(title string) (*entity.Book, error) {
+func (r *BookDBRepository) SearchByTitle(title string) (*entity.Book, error) {
 	var book entity.Book
 
 	query := `SELECT * FROM bookstore WHERE title=$1`

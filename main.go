@@ -1,8 +1,10 @@
 package main
 
-import "github.com/foxfurry/simple-rest/app"
+import (
+	"github.com/foxfurry/simple-rest/app/app_config"
+)
 
 func main(){
-	server := app.NewApp()
+	server := app_config.NewApp()
 	server.Start()
 }
