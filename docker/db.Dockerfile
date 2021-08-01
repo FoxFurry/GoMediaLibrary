@@ -1,2 +1,3 @@
 FROM postgres
-COPY ./../sql/init.sql /docker-entrypoint-initdb.d/
+WORKDIR /docker-entrypoint-initdb.d/
+COPY init.sql ./
