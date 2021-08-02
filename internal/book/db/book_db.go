@@ -50,7 +50,7 @@ func (r *BookDBRepository) GetBook(bookID uint64) (*entity.Book, error) {
 	case nil:
 		return &book, nil
 	default:
-		log.Fatalf("Unable to scan the row: %v", err)
+		log.Printf("Unable to scan the row: %v", err)
 		return nil,nil
 	}
 }

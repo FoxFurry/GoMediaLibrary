@@ -28,12 +28,22 @@ func NewApp() *app.App {
 	config()
 
 	newApp := &app.App{
-		Router: mux.NewRouter(),
-		Database: dbpool.GetDB(),
+		Router:   mux.NewRouter(),
+		Database: dbpool.CreateDBPool(
+			viper.GetString("Database.host"),
+			viper.GetInt("Database.port"),
+			viper.GetString("Database.user"),
+			viper.GetString("Database.password"),
+			viper.GetString("Database.dbname"),
+			viper.GetInt("Database.maxidleconnections"),
+			viper.GetInt("Database.maxopenconnections"),
+			viper.GetDuration("Database.maxconnidletime"),
+		),
 	}
 
 	routers.RegisterBookRoutes(newApp)
 
+	showRoutes(newApp.Router)
 	return newApp
 }
 
@@ -43,15 +53,6 @@ func config() {
 	flag.Parse()
 
 	yamlConfig(configFilePath, env)
-
-	dbpool.ConfigDBPool(
-		viper.GetString("Database.URL"),
-		viper.GetString("Database.database"),
-		viper.GetString("Database.initTable"),
-		viper.GetInt("Database.maxIdleConnections"),
-		viper.GetInt("Database.maxOpenConnections"),
-		viper.GetDuration("Database.maxConnIdleTime"),
-	)
 }
 
 func yamlConfig(path string, env string) {
@@ -90,4 +91,3 @@ func showRoutes(r *mux.Router) {
 		log.Printf("Logging error: %v", err)
 	}
 }
-

@@ -9,4 +9,6 @@ func BookNotFound(w http.ResponseWriter) {
 	server.RespondNotFound(w, "Specified book not found")
 }
 
+func HandleBookError(w http.ResponseWriter, msg string) {
 
+}
