@@ -133,3 +133,43 @@ func (r *BookDBRepository) SearchByTitle(title string) (*entity.Book, error) {
 		return nil,nil
 	}
 }
+
+func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (int64, error) {
+	query := `UPDATE bookstore SET title=$2, author=$3, year=$4, description=$5 WHERE id=$1`
+
+	res, err := r.database.Exec(query, book.Title, book.Author, book.Year, book.Description, bookID)
+
+	if err != nil {
+		log.Printf("Unable to update book: %v", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+
+	if err != nil {
+		log.Printf("Unable to get affected rows book: %v", err)
+	}
+
+	log.Printf("Rows affected: %v", rowsAffected)
+
+	return rowsAffected, err
+}
+
+func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
+	query := `DELETE FROM bookstore WHERE id=$1`
+
+	res, err := r.database.Exec(query, bookID)
+
+	if err != nil {
+		log.Printf("Unable to delete book: %v", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+
+	if err != nil {
+		log.Printf("Unable to get affected rows book: %v", err)
+	}
+
+	log.Printf("Rows affected: %v", rowsAffected)
+
+	return rowsAffected, err
+}
