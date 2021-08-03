@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
 	"log"
+	"net/http"
 )
 
 const (
@@ -41,6 +42,8 @@ func NewApp() *app.App {
 		),
 	}
 
+
+	newApp.Router.Use(setGlobalHeaders)
 	routers.RegisterBookRoutes(newApp)
 
 	showRoutes(newApp.Router)
@@ -71,6 +74,14 @@ func yamlConfig(path string, env string) {
 	if err != nil {
 		log.Fatalf("Fatal reading config: %+v", err)
 	}
+}
+
+func setGlobalHeaders(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		h.ServeHTTP(w, r)
+	})
 }
 
 func showRoutes(r *mux.Router) {
