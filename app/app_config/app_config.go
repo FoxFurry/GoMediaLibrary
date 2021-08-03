@@ -29,7 +29,7 @@ func NewApp() *app.App {
 	config()
 
 	newApp := &app.App{
-		Router:   mux.NewRouter(),
+		Router: mux.NewRouter(),
 		Database: dbpool.CreateDBPool(
 			viper.GetString("Database.host"),
 			viper.GetInt("Database.port"),
@@ -41,7 +41,6 @@ func NewApp() *app.App {
 			viper.GetDuration("Database.maxconnidletime"),
 		),
 	}
-
 
 	newApp.Router.Use(setGlobalHeaders)
 	routers.RegisterBookRoutes(newApp)
@@ -91,7 +90,7 @@ func showRoutes(r *mux.Router) {
 		path, errPath := route.GetPathTemplate()
 		method, errMethod := route.GetMethods()
 		if errPath != nil && errMethod != nil {
-			return fmt.Errorf("Error reading path or methods: %v %v", errPath, errMethod)
+			return fmt.Errorf("error reading path or methods: %v %v", errPath, errMethod)
 		} else {
 			log.Printf("%s %+v", path, method)
 		}

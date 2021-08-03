@@ -10,7 +10,7 @@ import (
 
 func createDatabase(db *sql.DB) {
 	queryDelete := `DROP DATABASE medialibrary;`
-	queryCreate := 	`CREATE DATABASE medialibrary
+	queryCreate := `CREATE DATABASE medialibrary
 					ENCODING    'utf8'
 					LC_COLLATE  'en_US.utf8'
 					LC_CTYPE    'en_US.utf8';`
@@ -73,5 +73,3 @@ func CreateDBPool(host string, port int, user string, pass string, dbname string
 
 	return db
 }
-
-

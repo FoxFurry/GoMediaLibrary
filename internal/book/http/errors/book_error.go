@@ -14,7 +14,7 @@ type BookNotFoundByAuthor struct {
 	Author string
 }
 
-type BookNotFound struct {}
+type BookNotFound struct{}
 
 func (b BookNotFoundByTitle) Error() string {
 	return fmt.Sprintf("Book(s) with title %v not found in db", b.Title)

@@ -5,7 +5,7 @@ import (
 	"github.com/foxfurry/simple-rest/internal/book/http/controllers"
 )
 
-func RegisterBookRoutes(mainApp *app.App){
+func RegisterBookRoutes(mainApp *app.App) {
 	bookRepo := controllers.NewBookApp(mainApp.Database)
 
 	mainApp.Router.HandleFunc("/book/author={author}", bookRepo.SearchByAuthor).Methods("GET", "OPTIONS")

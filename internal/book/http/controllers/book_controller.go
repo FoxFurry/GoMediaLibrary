@@ -15,13 +15,13 @@ type BookApp struct {
 	dbRepo bookDB.BookDBRepository
 }
 
-func NewBookApp(db *sql.DB) BookApp{
+func NewBookApp(db *sql.DB) BookApp {
 	return BookApp{
 		dbRepo: bookDB.NewBookRepo(db),
 	}
 }
 
-func (b *BookApp) SaveBook(w http.ResponseWriter, r *http.Request){
+func (b *BookApp) SaveBook(w http.ResponseWriter, r *http.Request) {
 	var book entity.Book
 
 	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
@@ -42,7 +42,7 @@ func (b *BookApp) SaveBook(w http.ResponseWriter, r *http.Request){
 
 }
 
-func (b *BookApp) GetBook(w http.ResponseWriter, r *http.Request){
+func (b *BookApp) GetBook(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
 
@@ -63,7 +63,7 @@ func (b *BookApp) GetBook(w http.ResponseWriter, r *http.Request){
 	}
 }
 
-func (b *BookApp) GetAllBooks(w http.ResponseWriter, r *http.Request){
+func (b *BookApp) GetAllBooks(w http.ResponseWriter, _ *http.Request) {
 	books, err := b.dbRepo.GetAllBooks()
 	if err != nil {
 		errors.HandleBookError(w, err)
@@ -77,7 +77,7 @@ func (b *BookApp) GetAllBooks(w http.ResponseWriter, r *http.Request){
 
 }
 
-func (b *BookApp) SearchByAuthor(w http.ResponseWriter, r *http.Request){
+func (b *BookApp) SearchByAuthor(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	author := params["author"]
 
@@ -93,7 +93,7 @@ func (b *BookApp) SearchByAuthor(w http.ResponseWriter, r *http.Request){
 	}
 }
 
-func (b *BookApp) SearchByTitle(w http.ResponseWriter, r *http.Request){
+func (b *BookApp) SearchByTitle(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	author := params["title"]
 

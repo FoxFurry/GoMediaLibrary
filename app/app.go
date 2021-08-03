@@ -18,6 +18,3 @@ type App struct {
 func (a *App) Start() {
 	log.Fatal(http.ListenAndServe(viper.GetString("server.port"), a.Router))
 }
-
-
-
