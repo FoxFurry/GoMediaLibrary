@@ -7,6 +7,6 @@ TODO:
  - Tests
  - Main service dockerfile
  - Docker-compose
- - .sql files 
+ - Fix sql queries
  - More isolation?
  - conf_prod.yaml - configuration for prod environment
