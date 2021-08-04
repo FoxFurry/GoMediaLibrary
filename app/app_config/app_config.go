@@ -27,7 +27,6 @@ var env string
 
 func NewApp() *app.App {
 	config()
-
 	newApp := &app.App{
 		Router: mux.NewRouter(),
 		Database: dbpool.CreateDBPool(
