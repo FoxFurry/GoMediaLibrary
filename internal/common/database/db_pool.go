@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-
 // ifDBExists returns true if dbname exists in database instance.
 // This function works specifically and only with postgres.
 func ifDBExists(db *sql.DB, dbname string) bool {
