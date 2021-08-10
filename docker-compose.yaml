@@ -6,5 +6,11 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+  go:
+    build:
+      context: .
+      dockerfile: ./docker/go.Dockerfile
+    links:
+      - "db:postgres"
     ports:
-      - "5432:5432"
+      - "8080:8080"
