@@ -28,18 +28,12 @@ func ifDBExists(db *sql.DB, dbname string) bool {
 
 // createDatabase drops dbname from database instance and recreate it with template1 parameters (en_US.utf-8)
 func createDatabase(db *sql.DB, dbname string) {
-	queryDelete := 	`DROP DATABASE IF EXISTS ` + dbname +`;`	// Since postgres does not support parameters for
-	queryCreate := 	`CREATE DATABASE ` + dbname	+				// schema modifiers we have no choice but to concatenate
-					`ENCODING    'utf8'` +						// db name into the query
-					`LC_COLLATE  'en_US.utf8'`+
+	queryCreate := 	`CREATE DATABASE ` + dbname	+				// Since postgres does not support parameters for
+					`ENCODING    'utf8'` +						// schema modifiers we have no choice but to concatenate
+					`LC_COLLATE  'en_US.utf8'`+					// db name into the query
 					`LC_CTYPE    'en_US.utf8';`
 
-	_, err := db.Query(queryDelete)
-	if err != nil {
-		log.Panicf("Could not delete database: %v", err)
-	}
-
-	_, err = db.Query(queryCreate)
+	_, err := db.Query(queryCreate)
 	if err != nil {
 		log.Panicf("Could not create database: %v", err)
 	}
@@ -47,13 +41,13 @@ func createDatabase(db *sql.DB, dbname string) {
 
 // Creates a bookstore table(id, title, author, year, description) for a given database instance
 func createBookstore(db *sql.DB) {
-	query := `CREATE TABLE IF NOT EXISTS bookstore (
+	query := `CREATE TABLE IF NOT EXISTS bookstore (		
 					id SERIAL PRIMARY KEY,
 					title TEXT NOT NULL,
 					author TEXT NOT NULL,
 					year INT NOT NULL,
 					description TEXT
-					);`
+					);`									// Should move it to separate sql file?
 
 	_, err := db.Query(query)
 	if err != nil {
