@@ -12,20 +12,22 @@ import (
 	"github.com/spf13/viper"
 )
 
-type App struct {
+// app structure is the core of the project. It provides router and database instances
+type app struct {
 	*http.Server
 	Router   *mux.Router
 	Database *sql.DB
 }
 
-func (a *App) Start() {
+// Start allows app to serve a http server on port from environment
+func (a *app) Start() {
 	log.Fatal(http.ListenAndServe(viper.GetString("server.port"), a.Router))
 }
 
-func NewApp() *App {
-	loadConfig()
-
-	newApp := &App{
+// NewApp returns an instance of app with configured router and database.
+// Configuration is loaded from viper environment
+func NewApp() *app {
+	newApp := &app{
 		Router: mux.NewRouter(),
 		Database: dbpool.CreateDBPool(
 			viper.GetString("Database.host"),
@@ -52,16 +54,6 @@ func NewApp() *App {
 	showRoutes(newApp.Router)
 
 	return newApp
-}
-
-func loadConfig() {
-	viper.SetConfigName("environment")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("./configs")
-
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Fatal reading environment: %+v", err)
-	}
 }
 
 func showRoutes(r *mux.Router) {
