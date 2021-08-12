@@ -6,6 +6,7 @@ networks:
 
 services:
   postgres:
+    container_name: "postgres"
     build:
       context: .
       dockerfile: ./docker/db.Dockerfile
@@ -21,9 +22,10 @@ services:
     networks:
       - main_network
   go:
+    container_name: "go"
     build:
       context: .
-      dockerfile: ./docker/go.Dockerfile
+      dockerfile: ./docker/go_test.Dockerfile
     depends_on:
       - postgres
     ports:

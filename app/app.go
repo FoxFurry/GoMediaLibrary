@@ -12,7 +12,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-// app structure is the core of the project. It provides router and database instances
+// app structure is the core of the project.
+// It embeds http server and provides router and database instances
 type app struct {
 	*http.Server
 	Router   *mux.Router

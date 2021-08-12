@@ -1,15 +1,32 @@
 package db
 
 import (
-	"fmt"
-	"github.com/foxfurry/simple-rest/app/env_setup"
+	"database/sql"
+	"github.com/foxfurry/simple-rest/configs"
+	dbpool "github.com/foxfurry/simple-rest/internal/common/database"
+	_ "github.com/foxfurry/simple-rest/internal/common/testing"
+	"github.com/spf13/viper"
 	"testing"
 )
 
+var db *sql.DB
+
 func init(){
-	env_setup.TestConfig()
+	configs.LoadConfig()
+
+	db = dbpool.CreateDBPool(
+		viper.GetString("database.host"),
+		viper.GetInt("database.port"),
+		viper.GetString("database.user"),
+		viper.GetString("database.password"),
+		viper.GetString("database.dbname"),
+		viper.GetInt("database.maxidleconnections"),
+		viper.GetInt("database.maxopenconnections"),
+		viper.GetDuration("database.maxconnidletime"),
+	)
 }
 
 func TestBookDBRepository_GetBook(t *testing.T) {
-	fmt.Printf("Running test 1")
+
+	t.Errorf("Sucking fucking")
 }

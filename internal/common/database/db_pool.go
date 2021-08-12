@@ -29,9 +29,9 @@ func ifDBExists(db *sql.DB, dbname string) bool {
 // createDatabase drops dbname from database instance and recreate it with template1 parameters (en_US.utf-8)
 func createDatabase(db *sql.DB, dbname string) {
 	queryCreate := 	`CREATE DATABASE ` + dbname	+				// Since postgres does not support parameters for
-					`ENCODING    'utf8'` +						// schema modifiers we have no choice but to concatenate
-					`LC_COLLATE  'en_US.utf8'`+					// db name into the query
-					`LC_CTYPE    'en_US.utf8';`
+					` ENCODING    'utf8'` +						// schema modifiers we have no choice but to concatenate
+					` LC_COLLATE  'en_US.utf8'`+				// db name into the query
+					` LC_CTYPE    'en_US.utf8';`
 
 	_, err := db.Query(queryCreate)
 	if err != nil {
