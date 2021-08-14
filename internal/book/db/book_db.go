@@ -30,9 +30,9 @@ func (r *BookDBRepository) SaveBook(book *entity.Book) (*entity.Book, error) {
 		return book, err
 	}
 
-	book.ID = bookID
-
-	return book, nil
+	returnBook := *book
+	returnBook.ID = bookID
+	return &returnBook, nil
 }
 
 func (r *BookDBRepository) GetBook(bookID uint64) (*entity.Book, error) {
@@ -186,6 +186,32 @@ func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
 	query := `DELETE FROM bookstore WHERE id=$1`
 
 	res, err := r.database.Exec(query, bookID)
+
+	if err != nil {
+		log.Printf("Unable to delete book: %v", err)
+		return 0, err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+
+	if err != nil {
+		log.Printf("Unable to get affected rows book: %v", err)
+		return 0, err
+	}
+
+	if rowsAffected == 0 {
+		return 0, errors.BookNotFound{}
+	}
+
+	log.Printf("Rows affected: %v", rowsAffected)
+
+	return rowsAffected, err
+}
+
+func (r *BookDBRepository) DeleteAllBooks() (int64, error) {
+	query := `TRUNCATE bookstore RESTART IDENTITY`
+
+	res, err := r.database.Exec(query)
 
 	if err != nil {
 		log.Printf("Unable to delete book: %v", err)

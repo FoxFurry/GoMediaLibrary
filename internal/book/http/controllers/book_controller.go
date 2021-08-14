@@ -157,3 +157,16 @@ func (b *BookApp) DeleteBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func (b *BookApp) DeleteAllBooks(w http.ResponseWriter, r *http.Request) {
+	deletedRows, err := b.dbRepo.DeleteAllBooks()
+	if err != nil {
+		errors.HandleBookError(w, err)
+		return
+	}
+
+	if err = json.NewEncoder(w).Encode(deletedRows); err != nil {
+		errors.HandleBookError(w, err)
+		return
+	}
+}
