@@ -78,7 +78,7 @@ func TestBookDBRepository_SaveBook(t *testing.T) {
 	}
 }
 
-func TestBookDBRepository_DeleteBook(t *testing.T) {
+func TestBookDBRepository_GetBook(t *testing.T) {
 	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
 		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
 	}
@@ -86,17 +86,16 @@ func TestBookDBRepository_DeleteBook(t *testing.T) {
 	for _, c := range genericTestCases {
 		c := c // To isolate test cases and be sure they won't be changed
 		t.Run(c.Title, func(t *testing.T) {
-			book, err := repo.SaveBook(&c)
+			savedBook, err := repo.SaveBook(&c)
 			if err != nil {
 				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
 			}
-
-			if _, err = repo.DeleteBook(book.ID); err != nil {
-				t.Errorf(fmt.Sprintf("Could not delete the book: %v: ", err))
+			getBook, err := repo.GetBook(savedBook.ID)
+			if err != nil {
+				t.Errorf(fmt.Sprintf("Could not get the book: %v: ", err))
 			}
-			_, err = repo.GetBook(book.ID)
 
-			assert.Equal(t, err, errors.BookNotFound{})
+			assert.True(t, c.EqualNoID(*getBook))
 		})
 	}
 }
@@ -121,28 +120,6 @@ func TestBookDBRepository_GetAllBooks(t *testing.T) {
 	}
 
 	assert.True(t, entity.BookArrayEqualNoID(allBooks, genericTestCases))
-}
-
-func TestBookDBRepository_GetBook(t *testing.T) {
-	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
-		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
-	}
-
-	for _, c := range genericTestCases {
-		c := c // To isolate test cases and be sure they won't be changed
-		t.Run(c.Title, func(t *testing.T) {
-			savedBook, err := repo.SaveBook(&c)
-			if err != nil {
-				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
-			}
-			getBook, err := repo.GetBook(savedBook.ID)
-			if err != nil {
-				t.Errorf(fmt.Sprintf("Could not get the book: %v: ", err))
-			}
-
-			assert.True(t, c.EqualNoID(*getBook))
-		})
-	}
 }
 
 func TestBookDBRepository_SearchByAuthor(t *testing.T) {
@@ -288,16 +265,6 @@ func TestBookDBRepository_SearchByTitle(t *testing.T) {
 
 }
 
-func TestBookDBRepository_DeleteAllBooks(t *testing.T) {
-	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
-		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
-	}
-
-	_, err := repo.GetBook(0)
-
-	assert.Equal(t, err, errors.BookNotFound{})
-}
-
 func TestBookDBRepository_UpdateBook(t *testing.T) {
 	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
 		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
@@ -322,3 +289,37 @@ func TestBookDBRepository_UpdateBook(t *testing.T) {
 
 	assert.True(t, bookAfterUpdateGet.EqualNoID(genericTestCases[1]))
 }
+
+func TestBookDBRepository_DeleteBook(t *testing.T) {
+	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
+		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
+	}
+
+	for _, c := range genericTestCases {
+		c := c // To isolate test cases and be sure they won't be changed
+		t.Run(c.Title, func(t *testing.T) {
+			book, err := repo.SaveBook(&c)
+			if err != nil {
+				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
+			}
+
+			if _, err = repo.DeleteBook(book.ID); err != nil {
+				t.Errorf(fmt.Sprintf("Could not delete the book: %v: ", err))
+			}
+			_, err = repo.GetBook(book.ID)
+
+			assert.Equal(t, err, errors.BookNotFound{})
+		})
+	}
+}
+
+func TestBookDBRepository_DeleteAllBooks(t *testing.T) {
+	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
+		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
+	}
+
+	_, err := repo.GetBook(0)
+
+	assert.Equal(t, err, errors.BookNotFound{})
+}
+
