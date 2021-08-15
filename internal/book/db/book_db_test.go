@@ -20,7 +20,7 @@ var genericTestCases []entity.Book
 func init() {
 	configs.LoadConfig()
 
-	db := dbpool.CreateDBPool(
+	repo = NewBookRepo(dbpool.CreateDBPool(
 		viper.GetString("database.host"),
 		viper.GetInt("database.port"),
 		viper.GetString("database.user"),
@@ -29,13 +29,14 @@ func init() {
 		viper.GetInt("database.maxidleconnections"),
 		viper.GetInt("database.maxopenconnections"),
 		viper.GetDuration("database.maxconnidletime"),
-	)
-
-	repo = BookDBRepository{database: db}
+	))
 
 	genericTestCases = []entity.Book{
 		{
-
+			Title:       "Test 1",
+			Author:      "Test Author 1",
+			Year:        1,
+			Description: "Test Description 1",
 		},
 		{
 			Title:       "Test 2",
