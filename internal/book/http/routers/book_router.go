@@ -16,6 +16,6 @@ func RegisterBookRoutes(router *mux.Router, db *sql.DB) {
 
 	router.HandleFunc("/book", bookRepo.SaveBook).Methods("POST", "OPTIONS")
 	router.HandleFunc("/book", bookRepo.UpdateBook).Methods("PUT", "OPTIONS")
-	router.HandleFunc("/book",bookRepo.DeleteAllBooks).Methods("DELETE","OPTIONS")
+	router.HandleFunc("/book", bookRepo.DeleteAllBooks).Methods("DELETE", "OPTIONS")
 	router.HandleFunc("/book/{id}", bookRepo.DeleteBook).Methods("DELETE", "OPTIONS")
 }

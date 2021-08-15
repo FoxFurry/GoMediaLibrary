@@ -12,4 +12,3 @@ type BookRepository interface {
 	DeleteBook(uint64) (int64, error)
 	DeleteAllBooks() (int64, error)
 }
-

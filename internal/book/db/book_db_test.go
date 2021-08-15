@@ -39,19 +39,19 @@ func init() {
 			Author:      "Test Author 1",
 			Year:        1,
 			Description: "Test Description 1",
-				},
+		},
 		{
 			Title:       "Test 2",
 			Author:      "",
 			Year:        2,
 			Description: "",
-				},
+		},
 		{
 			Title:       "Test 3",
 			Author:      "",
 			Year:        3,
 			Description: "Test Description 3",
-				},
+		},
 		{
 			Title:       "Test 4",
 			Author:      "Test Author 4",
@@ -60,14 +60,13 @@ func init() {
 	}
 }
 
-
 func TestBookDBRepository_SaveBook(t *testing.T) {
 	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
 		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
 	}
 
 	for _, c := range genericTestCases {
-		c := c			// To isolate test cases and be sure they won't be changed
+		c := c // To isolate test cases and be sure they won't be changed
 		t.Run(c.Title, func(t *testing.T) {
 			book, err := repo.SaveBook(&c)
 			if err != nil {
@@ -85,7 +84,7 @@ func TestBookDBRepository_DeleteBook(t *testing.T) {
 	}
 
 	for _, c := range genericTestCases {
-		c := c			// To isolate test cases and be sure they won't be changed
+		c := c // To isolate test cases and be sure they won't be changed
 		t.Run(c.Title, func(t *testing.T) {
 			book, err := repo.SaveBook(&c)
 			if err != nil {
@@ -108,7 +107,7 @@ func TestBookDBRepository_GetAllBooks(t *testing.T) {
 	}
 
 	for _, c := range genericTestCases {
-		c := c			// To isolate test cases and be sure they won't be changed
+		c := c // To isolate test cases and be sure they won't be changed
 		t.Run(c.Title, func(t *testing.T) {
 			if _, err := repo.SaveBook(&c); err != nil {
 				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
@@ -133,7 +132,7 @@ func TestBookDBRepository_GetBook(t *testing.T) {
 	}
 
 	for _, c := range genericTestCases {
-		c := c			// To isolate test cases and be sure they won't be changed
+		c := c // To isolate test cases and be sure they won't be changed
 		t.Run(c.Title, func(t *testing.T) {
 			savedBook, err := repo.SaveBook(&c)
 			if err != nil {
@@ -209,7 +208,7 @@ func TestBookDBRepository_SearchByAuthor(t *testing.T) {
 	}
 
 	for _, c := range authorDifferentTestCases {
-		c := c			// To isolate test cases and be sure they won't be changed
+		c := c // To isolate test cases and be sure they won't be changed
 		t.Run(c.Title, func(t *testing.T) {
 			if _, err := repo.SaveBook(&c); err != nil {
 				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
@@ -239,7 +238,6 @@ func TestBookDBRepository_SearchByAuthor(t *testing.T) {
 	if err != nil {
 		t.Errorf(fmt.Sprintf("Could not search by author: %v", err))
 	}
-
 
 	assert.True(t, entity.BookArrayEqualNoID(authorSameTestCases, searchedBooks))
 }

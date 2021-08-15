@@ -28,10 +28,10 @@ func ifDBExists(db *sql.DB, dbname string) bool {
 
 // createDatabase drops dbname from database instance and recreate it with template1 parameters (en_US.utf-8)
 func createDatabase(db *sql.DB, dbname string) {
-	queryCreate := 	`CREATE DATABASE ` + dbname	+				// Since postgres does not support parameters for
-					` ENCODING    'utf8'` +						// schema modifiers we have no choice but to concatenate
-					` LC_COLLATE  'en_US.utf8'`+				// db name into the query
-					` LC_CTYPE    'en_US.utf8';`
+	queryCreate := `CREATE DATABASE ` + dbname + // Since postgres does not support parameters for
+		` ENCODING    'utf8'` + // schema modifiers we have no choice but to concatenate
+		` LC_COLLATE  'en_US.utf8'` + // db name into the query
+		` LC_CTYPE    'en_US.utf8';`
 
 	_, err := db.Query(queryCreate)
 	if err != nil {
@@ -47,7 +47,7 @@ func createBookstore(db *sql.DB) {
 					author TEXT NOT NULL,
 					year INT NOT NULL,
 					description TEXT
-					);`									// Should move it to separate sql file?
+					);` // Should move it to separate sql file?
 
 	_, err := db.Query(query)
 	if err != nil {
@@ -63,24 +63,24 @@ func CreateDBPool(host string, port int, user string, pass string, dbname string
 
 	initTemplate := fmt.Sprintf("host=%s port=%d user=%s password=%s ", host, port, user, pass) // Connection template
 
-	initTable := fmt.Sprintf("%s dbname=%s sslmode=disable", initTemplate, dbname)	// Connection to specific db
-	initDB := fmt.Sprintf("%s sslmode=disable", initTemplate)						// Generic connection for db create
+	initTable := fmt.Sprintf("%s dbname=%s sslmode=disable", initTemplate, dbname) // Connection to specific db
+	initDB := fmt.Sprintf("%s sslmode=disable", initTemplate)                      // Generic connection for db create
 
-	db, err := sql.Open("postgres", initDB)	// Connection for db creation
+	db, err := sql.Open("postgres", initDB) // Connection for db creation
 	if err != nil {
 		log.Panicf("Could not connect to DB: %v", err)
 	}
 
-	if !ifDBExists(db, dbname){	// Since postgres does not allow IF NOT EXISTS for db alter - check and create are standalone
+	if !ifDBExists(db, dbname) { // Since postgres does not allow IF NOT EXISTS for db alter - check and create are standalone
 		log.Printf("Database %v does not exists, creating it", dbname)
 		createDatabase(db, dbname)
-	}else {
+	} else {
 		log.Printf("Database %v already exists, skipping creation", dbname)
 	}
 
-	db, err = sql.Open("postgres", initTable)	// Connection for table creation
+	db, err = sql.Open("postgres", initTable) // Connection for table creation
 	if err != nil {
-		log.Panicf("Could not connect to db:%v: %v", dbname,err)
+		log.Panicf("Could not connect to db:%v: %v", dbname, err)
 	}
 
 	createBookstore(db)
