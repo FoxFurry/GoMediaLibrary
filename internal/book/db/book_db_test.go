@@ -10,13 +10,12 @@ import (
 	_ "github.com/foxfurry/simple-rest/internal/common/testing"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"log"
 	"testing"
 )
 
 var repo BookDBRepository
 
-var testCases []entity.Book
+var genericTestCases []entity.Book
 
 func init() {
 	configs.LoadConfig()
@@ -34,7 +33,7 @@ func init() {
 
 	repo = BookDBRepository{database: db}
 
-	testCases = []entity.Book{
+	genericTestCases = []entity.Book{
 		{
 			Title:       "Test 1",
 			Author:      "Test Author 1",
@@ -63,18 +62,17 @@ func init() {
 
 
 func TestBookDBRepository_SaveBook(t *testing.T) {
-	t.Parallel()
+	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
+		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
+	}
 
-	for _, c := range testCases {
+	for _, c := range genericTestCases {
 		c := c			// To isolate test cases and be sure they won't be changed
 		t.Run(c.Title, func(t *testing.T) {
-			t.Parallel()
 			book, err := repo.SaveBook(&c)
 			if err != nil {
 				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
 			}
-			//c.Author = "Bullshit" // We just copy ID to expected mock cuz it's generated
-			log.Printf("---------------\n%v\n%v\n---------------------", c, book)
 
 			assert.True(t, c.EqualNoID(*book))
 		})
@@ -82,12 +80,13 @@ func TestBookDBRepository_SaveBook(t *testing.T) {
 }
 
 func TestBookDBRepository_DeleteBook(t *testing.T) {
-	t.Parallel()
+	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
+		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
+	}
 
-	for _, c := range testCases {
+	for _, c := range genericTestCases {
 		c := c			// To isolate test cases and be sure they won't be changed
 		t.Run(c.Title, func(t *testing.T) {
-			t.Parallel()
 			book, err := repo.SaveBook(&c)
 			if err != nil {
 				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
@@ -103,16 +102,14 @@ func TestBookDBRepository_DeleteBook(t *testing.T) {
 	}
 }
 
-// This test is not parallel, because order of queries matter
 func TestBookDBRepository_GetAllBooks(t *testing.T) {
 	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
 		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
 	}
 
-	for _, c := range testCases {
+	for _, c := range genericTestCases {
 		c := c			// To isolate test cases and be sure they won't be changed
 		t.Run(c.Title, func(t *testing.T) {
-
 			if _, err := repo.SaveBook(&c); err != nil {
 				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
 			}
@@ -123,19 +120,21 @@ func TestBookDBRepository_GetAllBooks(t *testing.T) {
 	if err != nil {
 		t.Errorf(fmt.Sprintf("Could not get all books: %v: ", err))
 	}
+
 	for v, book := range books {
-		book.ID = testCases[v].ID
-		assert.Equal(t, testCases[v], book)
+		book.ID = genericTestCases[v].ID
+		assert.True(t, genericTestCases[v].EqualNoID(book))
 	}
 }
 
 func TestBookDBRepository_GetBook(t *testing.T) {
-	t.Parallel()
+	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
+		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
+	}
 
-	for _, c := range testCases {
+	for _, c := range genericTestCases {
 		c := c			// To isolate test cases and be sure they won't be changed
 		t.Run(c.Title, func(t *testing.T) {
-			t.Parallel()
 			savedBook, err := repo.SaveBook(&c)
 			if err != nil {
 				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
@@ -145,7 +144,102 @@ func TestBookDBRepository_GetBook(t *testing.T) {
 				t.Errorf(fmt.Sprintf("Could not get the book: %v: ", err))
 			}
 
-			assert.Equal(t, &c, getBook)
+			assert.True(t, c.EqualNoID(*getBook))
 		})
 	}
+}
+
+func TestBookDBRepository_SearchByAuthor(t *testing.T) {
+	if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
+		t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
+	}
+
+	authorDifferentTestCases := []entity.Book{
+		{
+			Title:       "Test 1",
+			Author:      "Test 1",
+			Year:        1,
+			Description: "Test 1",
+		},
+		{
+			Title:       "Test 2",
+			Author:      "Test 2",
+			Year:        2,
+			Description: "Test 2",
+		},
+		{
+			Title:       "Test 3",
+			Author:      "Test 3",
+			Year:        3,
+			Description: "Test 3",
+		},
+		{
+			Title:       "Test 4",
+			Author:      "Test 4",
+			Year:        4,
+			Description: "Test 4",
+		},
+	}
+
+	authorSameTestCases := []entity.Book{
+		{
+			Title:       "Test 1",
+			Author:      "Test",
+			Year:        1,
+			Description: "Test 1",
+		},
+		{
+			Title:       "Test 2",
+			Author:      "Test",
+			Year:        2,
+			Description: "Test",
+		},
+		{
+			Title:       "Test 3",
+			Author:      "Test",
+			Year:        3,
+			Description: "Test 3",
+		},
+		{
+			Title:       "Test 4",
+			Author:      "Test",
+			Year:        4,
+			Description: "Test 4",
+		},
+	}
+
+	for _, c := range authorDifferentTestCases {
+		c := c			// To isolate test cases and be sure they won't be changed
+		t.Run(c.Title, func(t *testing.T) {
+			if _, err := repo.SaveBook(&c); err != nil {
+				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
+			}
+			getBook, err := repo.SearchByAuthor(c.Author)
+			if err != nil {
+				t.Errorf(fmt.Sprintf("Could not get the book by author: %v: ", err))
+			}
+
+			if len(getBook) != 1 {
+				t.Errorf(fmt.Sprintf("Expected one book as result, got %v", len(getBook)))
+			}
+			assert.True(t, c.EqualNoID(getBook[0]))
+		})
+	}
+
+	for _, c := range authorSameTestCases {
+		c := c
+		t.Run(c.Title, func(t *testing.T) {
+			if _, err := repo.SaveBook(&c); err != nil {
+				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
+			}
+		})
+	}
+
+	searchedBooks, err := repo.SearchByAuthor(authorSameTestCases[0].Author)
+	if err != nil {
+		t.Errorf(fmt.Sprintf("Could not search by author: %v", err))
+	}
+
+
+	assert.True(t, entity.BookArrayEqualNoID(authorSameTestCases, searchedBooks))
 }

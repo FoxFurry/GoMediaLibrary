@@ -1,7 +1,5 @@
 package entity
 
-import "log"
-
 type Book struct {
 	ID          uint64 `json:"id"`
 	Title       string `json:"title"`
@@ -17,7 +15,21 @@ func (lhs Book) Equal(rhs Book) bool{
 
 // EqualNoID works similar to Equal, except it ignores ID
 func (lhs Book) EqualNoID(rhs Book) bool{
-	log.Printf("---------------\n%v\n%v\n---------------------", lhs, rhs)
 	rhs.ID = lhs.ID
 	return rhs==lhs
+}
+
+// BookArrayEqualNoID compares two arrays of Book(s) using Book.EqualNoID on each element
+func BookArrayEqualNoID(lhs []Book, rhs []Book) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for idx, _ := range lhs{
+		if !lhs[idx].EqualNoID(rhs[idx]) {
+			return false
+		}
+	}
+
+	return true
 }
