@@ -35,10 +35,7 @@ func init() {
 
 	genericTestCases = []entity.Book{
 		{
-			Title:       "Test 1",
-			Author:      "Test Author 1",
-			Year:        1,
-			Description: "Test Description 1",
+
 		},
 		{
 			Title:       "Test 2",
