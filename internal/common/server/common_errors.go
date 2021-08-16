@@ -22,3 +22,7 @@ func RespondInternalError(w http.ResponseWriter, error string) {
 func RespondBadRequest(w http.ResponseWriter, error string) {
 	respondWithError(w, ErrorResponse{errMsg: error, errType: 400})
 }
+
+func RespondAlreadyExists(w http.ResponseWriter, error string) {
+	respondWithError(w, ErrorResponse{errMsg: error, errType: 403})
+}

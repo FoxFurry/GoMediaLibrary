@@ -19,6 +19,13 @@ func (lhs Book) EqualNoID(rhs Book) bool {
 	return rhs == lhs
 }
 
+func (obj Book) IsValid() bool {
+	if obj.Title == "" || obj.Author == "" || obj.Year == 0 {
+		return false
+	}
+	return true
+}
+
 // BookArrayEqualNoID compares two arrays of Book(s) using Book.EqualNoID on each element
 func BookArrayEqualNoID(lhs []Book, rhs []Book) bool {
 	if len(lhs) != len(rhs) {

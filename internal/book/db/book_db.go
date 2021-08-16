@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	goerrors "errors"
 	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
 	"github.com/foxfurry/simple-rest/internal/book/domain/repository"
 	"github.com/foxfurry/simple-rest/internal/book/http/errors"
@@ -19,6 +20,14 @@ func NewBookRepo(db *sql.DB) BookDBRepository {
 var _ repository.BookRepository = &BookDBRepository{}
 
 func (r *BookDBRepository) SaveBook(book *entity.Book) (*entity.Book, error) {
+	if !book.IsValid() {
+		log.Printf("Invalid request: %v", book)
+		return book, errors.BookBadRequest{}
+	} else if _, err := r.SearchByTitle(book.Title); err == nil {
+		log.Printf("Books with such title already exists")
+		return book, errors.BookTitleAlreadyExists{}
+	}
+
 	query := `INSERT INTO bookstore (title, author, year, description) VALUES ($1, $2, $3, $4) RETURNING id`
 
 	var bookID uint64
@@ -98,6 +107,11 @@ func (r *BookDBRepository) GetAllBooks() ([]entity.Book, error) {
 func (r *BookDBRepository) SearchByAuthor(author string) ([]entity.Book, error) {
 	var books []entity.Book
 
+	if author == "" {
+		log.Printf("Author field is empty")
+		return books, errors.BookBadRequest{}
+	}
+
 	query := `SELECT * FROM bookstore WHERE author=$1`
 
 	rows, err := r.database.Query(query, author)
@@ -138,6 +152,11 @@ func (r *BookDBRepository) SearchByAuthor(author string) ([]entity.Book, error) 
 func (r *BookDBRepository) SearchByTitle(title string) (*entity.Book, error) {
 	var book entity.Book
 
+	if title == "" {
+		log.Printf("Title field is empty")
+		return &book, errors.BookBadRequest{}
+	}
+
 	query := `SELECT * FROM bookstore WHERE title=$1`
 
 	row := r.database.QueryRow(query, title)
@@ -157,12 +176,23 @@ func (r *BookDBRepository) SearchByTitle(title string) (*entity.Book, error) {
 }
 
 func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity.Book, error) {
+	returnBook := *book
+	returnBook.ID = bookID
+
+	if bookID < 1 {
+		log.Printf("Serial is less than 1")
+		return &returnBook, errors.BookBadRequest{}
+	} else if !book.IsValid() {
+		log.Printf("Invalid request: %v", book)
+		return book, errors.BookBadRequest{}
+	} else if _, err := r.GetBook(bookID); goerrors.Is(err, errors.BookNotFound{}) {
+		log.Printf("Book does not exists")
+	}
+
 	query := `UPDATE bookstore SET title=$2, author=$3, year=$4, description=$5 WHERE id=$1`
 
 	_, err := r.database.Exec(query, bookID, book.Title, book.Author, book.Year, book.Description)
 
-	returnBook := *book
-	returnBook.ID = bookID
 	if err != nil {
 		log.Printf("Unable to update book: %v", err)
 		return &returnBook, err
@@ -172,6 +202,11 @@ func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity
 }
 
 func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
+	if bookID < 1 {
+		log.Printf("Serial is less than 1")
+		return 0, errors.BookBadRequest{}
+	}
+
 	query := `DELETE FROM bookstore WHERE id=$1`
 
 	res, err := r.database.Exec(query, bookID)
@@ -192,18 +227,24 @@ func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
 		return 0, errors.BookNotFound{}
 	}
 
-	log.Printf("Rows affected: %v", rowsAffected)
+	log.Printf("Deleted rows: %v", rowsAffected)
 
 	return rowsAffected, err
 }
 
 func (r *BookDBRepository) DeleteAllBooks() (int64, error) {
-	query := `TRUNCATE bookstore RESTART IDENTITY`
+	query := `DELETE FROM bookstore`
+	queryRestart := `ALTER SEQUENCE bookstore_id_seq RESTART WITH 1`
 
 	res, err := r.database.Exec(query)
 
 	if err != nil {
 		log.Printf("Unable to delete book: %v", err)
+		return 0, err
+	}
+
+	if _, err = r.database.Exec(queryRestart); err != nil {
+		log.Printf("Unable to restart identity: %v", err)
 		return 0, err
 	}
 
