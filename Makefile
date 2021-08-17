@@ -8,6 +8,6 @@ tests:
 integration-tests:
 	@sh -c "while ! pg_isready -d medialibrary -h postgres -p 5432 -U postgres; do echo Waiting for postgres 3s; sleep 3; done"
 	@echo "Connection successful. Running tests"
-	go test -coverprofile=./coverage.out ./...
+	go test -v -coverprofile=./coverage.out ./...
 	@echo "Tests complete. Generating code coverage"
 	go tool cover -html=coverage.out -o ./coverage/coverage.html

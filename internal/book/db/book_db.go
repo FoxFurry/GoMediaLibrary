@@ -33,7 +33,7 @@ const (
 func (r *BookDBRepository) SaveBook(book *entity.Book) (*entity.Book, error) {
 	if !book.IsValid() {
 		log.Printf("Invalid request: %v", book)
-		return book, errors.BookBadRequest{}
+		return nil, errors.BookBadRequest{}
 	}
 
 	var bookID uint64
@@ -42,7 +42,7 @@ func (r *BookDBRepository) SaveBook(book *entity.Book) (*entity.Book, error) {
 
 	if err != nil {
 		log.Printf("Unable to save book to db: %v", err)
-		return book, errors.BookBadScanOptions{Msg: err.Error()}
+		return nil, errors.BookBadScanOptions{Msg: err.Error()}
 	}
 
 	returnBook := *book
@@ -57,42 +57,32 @@ func (r *BookDBRepository) GetBook(bookID uint64) (*entity.Book, error) {
 
 	err := row.Scan(&book.ID, &book.Title, &book.Author, &book.Year, &book.Description)
 
-	switch err {
-	case sql.ErrNoRows:
+	if err == sql.ErrNoRows {
 		log.Printf("Book id#%v not found", bookID)
-		return &book, errors.BookNotFound{}
-	case nil:
-		return &book, nil
-	default:
-		log.Printf("Unable to scan the row: %v", err)
-		return nil, err
+		return nil, errors.BookNotFound{}
 	}
+
+	return &book, nil
 }
 
 func (r *BookDBRepository) GetAllBooks() ([]entity.Book, error) {
 	var books []entity.Book
 
 	rows, err := r.database.Query(queryGetAll)
-
 	if err != nil {
 		log.Printf("Unable to get all books: %v", err)
-		return books, err
+		return nil, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
-	defer func(rows *sql.Rows) {
-		err = rows.Close()
-		if err != nil {
-			log.Panicf("Could not close the db rows: %v", err)
-		}
-	}(rows)
+	defer rows.Close()
 
 	for rows.Next() {
 		var tempBook entity.Book
-
 		err = rows.Scan(&tempBook.ID, &tempBook.Title, &tempBook.Author, &tempBook.Year, &tempBook.Description)
 
 		if err != nil {
 			log.Printf("Unable to scan the user: %v", err)
+			continue
 		}
 
 		books = append(books, tempBook)
@@ -100,34 +90,28 @@ func (r *BookDBRepository) GetAllBooks() ([]entity.Book, error) {
 
 	if len(books) == 0 {
 		log.Printf("Could not get all the books\n")
-		return books, errors.BookNotFound{}
+		return nil, errors.BookNotFound{}
 	}
 
 	return books, nil
 }
 
 func (r *BookDBRepository) SearchByAuthor(author string) ([]entity.Book, error) {
-	var books []entity.Book
-
 	if author == "" {
 		log.Printf("Author field is empty")
-		return books, errors.BookBadRequest{}
+		return nil, errors.BookBadRequest{}
 	}
 
 	rows, err := r.database.Query(querySearchByAuthorBook, author)
 
 	if err != nil {
 		log.Printf("Could not get all books with author %v: %v", author, err)
-		return books, err
+		return nil, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
-	defer func(rows *sql.Rows) {
-		err = rows.Close()
-		if err != nil {
-			log.Panicf("Could not close the db rows: %v", err)
-		}
-	}(rows)
+	defer rows.Close()
 
+	var books []entity.Book
 	for rows.Next() {
 		var tempBook entity.Book
 
@@ -154,23 +138,18 @@ func (r *BookDBRepository) SearchByTitle(title string) (*entity.Book, error) {
 
 	if title == "" {
 		log.Printf("Title field is empty")
-		return &book, errors.BookBadRequest{}
+		return nil, errors.BookBadRequest{}
 	}
 
 	row := r.database.QueryRow(querySearchByTitleBook, title)
 
 	err := row.Scan(&book.ID, &book.Title, &book.Author, &book.Year, &book.Description)
-
-	switch err {
-	case sql.ErrNoRows:
+	if err == sql.ErrNoRows {
 		log.Printf("Book title#%v not found", title)
-		return &book, errors.BookNotFoundByTitle{Title: title}
-	case nil:
-		return &book, nil
-	default:
-		log.Fatalf("Unable to scan the row: %v", err)
-		return &book, err
+		return nil, errors.BookNotFoundByTitle{Title: title}
 	}
+
+	return &book, nil
 }
 
 func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity.Book, error) {

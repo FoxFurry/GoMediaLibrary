@@ -24,7 +24,9 @@ type BookBadScanOptions struct{
 
 type BookTitleAlreadyExists struct{}
 
-
+type BookCouldNotQuery struct{
+	Msg string
+}
 
 func (b BookNotFoundByTitle) Error() string {
 	return fmt.Sprintf("Book(s) with title %v not found in db", b.Title)
@@ -48,6 +50,10 @@ func (b BookTitleAlreadyExists) Error() string {
 
 func (b BookBadScanOptions) Error() string {
 	return fmt.Sprintf("Bad SQL scan options: %v", b.Msg)
+}
+
+func (b BookCouldNotQuery) Error() string {
+	return fmt.Sprintf("Could not execute query: %v", b.Msg)
 }
 
 func HandleBookError(w http.ResponseWriter, err error) {
