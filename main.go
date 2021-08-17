@@ -11,3 +11,7 @@ func main() {
 	server := app.NewApp()
 	server.Start()
 }
+
+/*
+integration tests/ unit tests/ functional tests
+ */

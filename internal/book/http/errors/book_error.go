@@ -18,7 +18,13 @@ type BookNotFound struct{}
 
 type BookBadRequest struct{}
 
+type BookBadScanOptions struct{
+	Msg string
+}
+
 type BookTitleAlreadyExists struct{}
+
+
 
 func (b BookNotFoundByTitle) Error() string {
 	return fmt.Sprintf("Book(s) with title %v not found in db", b.Title)
@@ -33,11 +39,15 @@ func (b BookNotFound) Error() string {
 }
 
 func (b BookBadRequest) Error() string {
-	return "Input book is invalid: Title, author and year are required"
+	return "Title, author and year are mandatory fields"
 }
 
 func (b BookTitleAlreadyExists) Error() string {
 	return "Requested title already exists"
+}
+
+func (b BookBadScanOptions) Error() string {
+	return fmt.Sprintf("Bad SQL scan options: %v", b.Msg)
 }
 
 func HandleBookError(w http.ResponseWriter, err error) {

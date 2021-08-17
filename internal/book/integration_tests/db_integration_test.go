@@ -1,121 +1,114 @@
-package db
-
-import (
-	"database/sql"
-	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
-	"github.com/foxfurry/simple-rest/internal/book/http/errors"
-	_ "github.com/foxfurry/simple-rest/internal/common/tests"
-	"log"
-	"regexp"
-	"testing"
-)
-
-/*
-rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"}).AddRow(1, "test title", "test author", 1, "test description")
-				mock.ExpectQuery()
-*/
-
-type BookDBMock struct {
-	TestName            string
-	Input               entity.Book
-	InputArray          []entity.Book
-	ExpectedResult      entity.Book
-	ExpectedArrayResult []entity.Book
-	Parameter           string
-	ExpectedRows        int64
-	ExpectedError       error
-}
-
-func newMock() (*sql.DB, sqlmock.Sqlmock) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		log.Fatalf("Could not create a new mock: %v", err)
-	}
-
-	return db, mock
-}
-
-func TestBookDBRepository_SaveBook(t *testing.T) {
-	db, mock := newMock()
-	defer db.Close()
-
-	repo := NewBookRepo(db)
-
-	saveBookMocks := []struct {
-		testName       string
-		input          entity.Book
-		expectedOutput entity.Book
-		expectedError  error
-		mockFunc       func()
-		mockRepo       BookDBRepository
-	}{
-		{
-			testName: "Test Successful",
-			input: entity.Book{
-				Title:       "test title",
-				Author:      "test author",
-				Year:        1,
-				Description: "test description",
-			},
-			expectedOutput: entity.Book{
-				ID:          1,
-				Title:       "test title",
-				Author:      "test author",
-				Year:        1,
-				Description: "test description",
-			},
-			expectedError: nil,
-			mockFunc: func() {
-				rows := mock.NewRows([]string{"id"}).AddRow(1)
-				mock.ExpectQuery(regexp.QuoteMeta(querySaveBook)).WithArgs("test title", "test author", 1, "test description").WillReturnRows(rows)
-			},
-			mockRepo: repo,
-		},
-		{
-			testName: "Test Unsuccessful: Invalid Book Request",
-			input: entity.Book{
-				Author:      "test author",
-				Year:        1,
-				Description: "test description",
-			},
-			expectedOutput: entity.Book{},
-			expectedError: errors.BookBadRequest{},
-			mockRepo: repo,
-		},
-		{
-			testName: "Test Unsuccessful: Invalid Repository",
-			input: entity.Book{
-				Title: "test title",
-				Author:      "test author",
-				Year:        1,
-				Description: "test description",
-			},
-			expectedOutput: entity.Book{},
-			expectedError: errors.BookBadScanOptions{Msg: "sql: no rows in result set"},
-			mockFunc: func() {
-				rows := mock.NewRows([]string{"id"})
-				mock.ExpectQuery(regexp.QuoteMeta(querySaveBook)).WithArgs("test title", "test author", 1, "test description").WillReturnRows(rows)
-			},
-			mockRepo: repo,
-		},
-	}
-
-	for _, test := range saveBookMocks {
-		t.Run(test.testName, func(t *testing.T) {
-			if test.mockFunc != nil { test.mockFunc() }
-
-			res, err := test.mockRepo.SaveBook(&test.input)
-			if (err != nil) && (err != test.expectedError) {
-				t.Errorf("Unexpected error:\nExpected: %v\nActual: %v", test.expectedError, err)
-				return
-			} else if (err == nil) && !test.expectedOutput.Equal(*res) {
-				t.Errorf("Unexpected result:\nExpected: %v\nActual: %v", test.expectedOutput, res)
-			}
-		})
-	}
-}
-
+package integration_tests
+//
+//import (
+//	goerrors "errors"
+//	"fmt"
+//	"github.com/foxfurry/simple-rest/configs"
+//	"github.com/foxfurry/simple-rest/internal/book/db"
+//	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
+//	"github.com/foxfurry/simple-rest/internal/book/http/errors"
+//	dbpool "github.com/foxfurry/simple-rest/internal/common/database"
+//	"github.com/spf13/viper"
+//	"github.com/stretchr/testify/assert"
+//	"log"
+//	"testing"
+//)
+//
+//type BookDBMock struct {
+//	TestName            string
+//	Input               entity.Book
+//	InputArray          []entity.Book
+//	ExpectedResult      entity.Book
+//	ExpectedArrayResult []entity.Book
+//	Parameter           string
+//	ExpectedRows        int64
+//	ExpectedError       error
+//}
+//
+//var repo db.BookDBRepository
+//
+//func init() {
+//	configs.LoadConfig()
+//	repo = db.NewBookRepo(dbpool.CreateDBPool(
+//		viper.GetString("database_test.host"),
+//		viper.GetInt("database_test.port"),
+//		viper.GetString("database_test.user"),
+//		viper.GetString("database_test.password"),
+//		viper.GetString("database_test.dbname"),
+//		viper.GetInt("database_test.maxidleconnections"),
+//		viper.GetInt("database_test.maxopenconnections"),
+//		viper.GetDuration("database_test.maxconnidletime"),
+//	))
+//}
+//
+//func TestBookDBRepository_SaveBook(t *testing.T) {
+//	saveBookMocks := []BookDBMock{
+//		{
+//			TestName: "Test Successful",
+//			InputArray: []entity.Book{
+//				{
+//					Title:       "Test 1",
+//					Author:      "Test 1",
+//					Year:        1,
+//					Description: "Test 1",
+//				},
+//			},
+//			ExpectedResult: entity.Book{
+//				Title:       "Test 1",
+//				Author:      "Test 1",
+//				Year:        1,
+//				Description: "Test 1",
+//			},
+//			ExpectedError: nil,
+//		},
+//		{
+//			TestName: "Test Unsuccessful Bad Request",
+//			InputArray: []entity.Book{
+//				{},
+//			},
+//			ExpectedResult: entity.Book{},
+//			ExpectedError:  errors.BookBadRequest{},
+//		},
+//		{
+//			TestName: "Test Unsuccessful Title Already Exists",
+//			InputArray: []entity.Book{
+//				{
+//					Title:       "Test 1",
+//					Author:      "Test 1",
+//					Year:        1,
+//					Description: "Test 1",
+//				},
+//				{
+//					Title:       "Test 1",
+//					Author:      "Test 1",
+//					Year:        1,
+//					Description: "Test 1",
+//				},
+//			},
+//			ExpectedResult: entity.Book{},
+//			ExpectedError:  errors.BookTitleAlreadyExists{},
+//		},
+//	}
+//
+//	for _, c := range saveBookMocks {
+//		if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
+//			t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
+//		}
+//		c := c // To isolate test cases and be sure they won't be changed
+//		t.Run(c.TestName, func(t *testing.T) {
+//			for _, val := range c.InputArray {
+//				log.Println(val)
+//				book, err := repo.SaveBook(&val)
+//				if err != nil {
+//					assert.True(t, goerrors.Is(err, c.ExpectedError), "Errors are not same:\nExpected: %v\nActual: %v", c.ExpectedError, err)
+//				} else {
+//					assert.True(t, val.EqualNoID(*book))
+//				}
+//			}
+//		})
+//	}
+//}
+//
 //func TestBookDBRepository_GetBook(t *testing.T) {
 //	getBookMocks := []BookDBMock{
 //		{

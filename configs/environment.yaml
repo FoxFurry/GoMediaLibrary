@@ -10,3 +10,14 @@ database:
   maxidleconnections: 5
   maxopenconnections: 10
   maxconnidletime: 60s
+
+database_test:
+  host: postgres
+  port: 5432
+  user: postgres
+  password: postgres
+  dbname: medialibrary_test
+  maxidleconnections: 5
+  maxopenconnections: 10
+  maxconnidletime: 60s
+

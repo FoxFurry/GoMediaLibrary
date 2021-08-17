@@ -19,24 +19,30 @@ func NewBookRepo(db *sql.DB) BookDBRepository {
 
 var _ repository.BookRepository = &BookDBRepository{}
 
+const (
+	querySaveBook           = `INSERT INTO bookstore (title, author, year, description) VALUES ($1, $2, $3, $4) RETURNING id`
+	queryGetBook            = `SELECT * FROM bookstore WHERE id=$1`
+	queryGetAll             = `SELECT * FROM bookstore`
+	querySearchByAuthorBook = `SELECT * FROM bookstore WHERE author=$1`
+	querySearchByTitleBook  = `SELECT * FROM bookstore WHERE title=$1`
+	queryUpdateBook         = `UPDATE bookstore SET title=$2, author=$3, year=$4, description=$5 WHERE id=$1`
+	queryDeleteBook = `DELETE FROM bookstore WHERE id=$1`
+	queryDeleteAllAndAlterBooks = `DELETE FROM bookstore; ALTER SEQUENCE bookstore_id_seq RESTART WITH 1`
+)
+
 func (r *BookDBRepository) SaveBook(book *entity.Book) (*entity.Book, error) {
 	if !book.IsValid() {
 		log.Printf("Invalid request: %v", book)
 		return book, errors.BookBadRequest{}
-	} else if _, err := r.SearchByTitle(book.Title); err == nil {
-		log.Printf("Books with such title already exists")
-		return book, errors.BookTitleAlreadyExists{}
 	}
-
-	query := `INSERT INTO bookstore (title, author, year, description) VALUES ($1, $2, $3, $4) RETURNING id`
 
 	var bookID uint64
 
-	err := r.database.QueryRow(query, book.Title, book.Author, book.Year, book.Description).Scan(&bookID)
+	err := r.database.QueryRow(querySaveBook, book.Title, book.Author, book.Year, book.Description).Scan(&bookID)
 
 	if err != nil {
 		log.Printf("Unable to save book to db: %v", err)
-		return book, err
+		return book, errors.BookBadScanOptions{Msg: err.Error()}
 	}
 
 	returnBook := *book
@@ -47,9 +53,7 @@ func (r *BookDBRepository) SaveBook(book *entity.Book) (*entity.Book, error) {
 func (r *BookDBRepository) GetBook(bookID uint64) (*entity.Book, error) {
 	var book entity.Book
 
-	query := `SELECT * FROM bookstore WHERE id=$1`
-
-	row := r.database.QueryRow(query, bookID)
+	row := r.database.QueryRow(queryGetBook, bookID)
 
 	err := row.Scan(&book.ID, &book.Title, &book.Author, &book.Year, &book.Description)
 
@@ -68,9 +72,7 @@ func (r *BookDBRepository) GetBook(bookID uint64) (*entity.Book, error) {
 func (r *BookDBRepository) GetAllBooks() ([]entity.Book, error) {
 	var books []entity.Book
 
-	query := `SELECT * FROM bookstore`
-
-	rows, err := r.database.Query(query)
+	rows, err := r.database.Query(queryGetAll)
 
 	if err != nil {
 		log.Printf("Unable to get all books: %v", err)
@@ -112,9 +114,7 @@ func (r *BookDBRepository) SearchByAuthor(author string) ([]entity.Book, error) 
 		return books, errors.BookBadRequest{}
 	}
 
-	query := `SELECT * FROM bookstore WHERE author=$1`
-
-	rows, err := r.database.Query(query, author)
+	rows, err := r.database.Query(querySearchByAuthorBook, author)
 
 	if err != nil {
 		log.Printf("Could not get all books with author %v: %v", author, err)
@@ -157,9 +157,7 @@ func (r *BookDBRepository) SearchByTitle(title string) (*entity.Book, error) {
 		return &book, errors.BookBadRequest{}
 	}
 
-	query := `SELECT * FROM bookstore WHERE title=$1`
-
-	row := r.database.QueryRow(query, title)
+	row := r.database.QueryRow(querySearchByTitleBook, title)
 
 	err := row.Scan(&book.ID, &book.Title, &book.Author, &book.Year, &book.Description)
 
@@ -189,9 +187,7 @@ func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity
 		log.Printf("Book does not exists")
 	}
 
-	query := `UPDATE bookstore SET title=$2, author=$3, year=$4, description=$5 WHERE id=$1`
-
-	_, err := r.database.Exec(query, bookID, book.Title, book.Author, book.Year, book.Description)
+	_, err := r.database.Exec(queryUpdateBook, bookID, book.Title, book.Author, book.Year, book.Description)
 
 	if err != nil {
 		log.Printf("Unable to update book: %v", err)
@@ -206,10 +202,7 @@ func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
 		log.Printf("Serial is less than 1")
 		return 0, errors.BookBadRequest{}
 	}
-
-	query := `DELETE FROM bookstore WHERE id=$1`
-
-	res, err := r.database.Exec(query, bookID)
+	res, err := r.database.Exec(queryDeleteBook, bookID)
 
 	if err != nil {
 		log.Printf("Unable to delete book: %v", err)
@@ -233,18 +226,10 @@ func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
 }
 
 func (r *BookDBRepository) DeleteAllBooks() (int64, error) {
-	query := `DELETE FROM bookstore`
-	queryRestart := `ALTER SEQUENCE bookstore_id_seq RESTART WITH 1`
-
-	res, err := r.database.Exec(query)
+	res, err := r.database.Exec(queryDeleteAllAndAlterBooks)
 
 	if err != nil {
-		log.Printf("Unable to delete book: %v", err)
-		return 0, err
-	}
-
-	if _, err = r.database.Exec(queryRestart); err != nil {
-		log.Printf("Unable to restart identity: %v", err)
+		log.Printf("Unable to delete book or alter the sequence: %v", err)
 		return 0, err
 	}
 
