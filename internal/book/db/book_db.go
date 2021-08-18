@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	goerrors "errors"
 	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
 	"github.com/foxfurry/simple-rest/internal/book/domain/repository"
 	"github.com/foxfurry/simple-rest/internal/book/http/errors"
@@ -162,8 +161,6 @@ func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity
 	} else if !book.IsValid() {
 		log.Printf("Invalid request: %v", book)
 		return book, errors.BookBadRequest{}
-	} else if _, err := r.GetBook(bookID); goerrors.Is(err, errors.BookNotFound{}) {
-		log.Printf("Book does not exists")
 	}
 
 	_, err := r.database.Exec(queryUpdateBook, bookID, book.Title, book.Author, book.Year, book.Description)

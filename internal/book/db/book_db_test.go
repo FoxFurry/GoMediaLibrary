@@ -541,7 +541,7 @@ func TestBookDBRepository_UpdateBook(t *testing.T) {
 
 	repo := NewBookRepo(db)
 
-	searchByAuthorMocks := []struct {
+	updateBookMocks := []struct {
 		testName       string
 		input          entity.Book
 		expectedOutput entity.Book
@@ -553,33 +553,30 @@ func TestBookDBRepository_UpdateBook(t *testing.T) {
 		{
 			testName: "Test Successful",
 			input: entity.Book{
-				Title:       "test title",
-				Author:      "test author",
-				Year:        1,
-				Description: "test description 1",
+				Title:       "test title 2",
+				Author:      "test author 2",
+				Year:        2,
+				Description: "test description 2",
 			},
 			expectedOutput: entity.Book{
 				ID:          3,
-				Title:       "test title",
-				Author:      "test author",
-				Year:        1,
-				Description: "test description 1",
+				Title:       "test title 2",
+				Author:      "test author 2",
+				Year:        2,
+				Description: "test description 2",
 			},
 			expectedError: nil,
 			mockFunc: func() {
-				rowsFirstQuery := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"}).
-					AddRow(3, "test title", "test author", 1, "test description 1")
-				rowsSecondQuery := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"}).
-					AddRow(3, "test title", "test author", 1, "test description 1")
-				mock.ExpectQuery(regexp.QuoteMeta(queryGetBook)).WithArgs(3).WillReturnRows(rowsFirstQuery)
-				mock.ExpectQuery(regexp.QuoteMeta(queryUpdateBook)).WithArgs(3, "test title", "test author", 1, "test description 1").WillReturnRows(rowsSecondQuery)
+				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"}).
+					AddRow(3, "test title 2", "test author 2", 2, "test description 2")
+				mock.ExpectQuery("UPDATE bookstore SET title\\=\\$2, author\\=\\$3, year\\=\\$4, description\\=\\$5 WHERE id\\=\\$1").WithArgs(3, "test title 2", "test author 2", 2, "test description 2").WillReturnRows(rows)
 			},
 			mockRepo: repo,
 			id:       3,
 		},
 	}
 
-	for _, test := range searchByAuthorMocks {
+	for _, test := range updateBookMocks {
 		t.Run(test.testName, func(t *testing.T) {
 			if test.mockFunc != nil {
 				test.mockFunc()
