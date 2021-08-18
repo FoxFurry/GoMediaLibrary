@@ -181,14 +181,14 @@ func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
 
 	if err != nil {
 		log.Printf("Unable to delete book: %v", err)
-		return 0, err
+		return 0, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
 	rowsAffected, err := res.RowsAffected()
 
 	if err != nil {
 		log.Printf("Unable to get affected rows book: %v", err)
-		return 0, err
+		return 0, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
 	if rowsAffected == 0 {
