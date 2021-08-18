@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	goerrors "errors"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
 	"github.com/foxfurry/simple-rest/internal/book/http/errors"
@@ -567,9 +568,45 @@ func TestBookDBRepository_UpdateBook(t *testing.T) {
 			},
 			expectedError: nil,
 			mockFunc: func() {
-				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"}).
-					AddRow(3, "test title 2", "test author 2", 2, "test description 2")
-				mock.ExpectQuery("UPDATE bookstore SET title\\=\\$2, author\\=\\$3, year\\=\\$4, description\\=\\$5 WHERE id\\=\\$1").WithArgs(3, "test title 2", "test author 2", 2, "test description 2").WillReturnRows(rows)
+				mock.ExpectExec(regexp.QuoteMeta(queryUpdateBook)).WithArgs(3, "test title 2", "test author 2", 2, "test description 2").WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+			mockRepo: repo,
+			id:       3,
+		},
+		{
+			testName:      "Test Unsuccessful: Invalid book id",
+			expectedError: errors.BookBadRequest{},
+			id:            0,
+		},
+		{
+			testName: "Test Unsuccessful: Invalid book",
+			input: entity.Book{
+				Title:       "",
+				Author:      "",
+				Year:        0,
+				Description: "",
+			},
+			expectedError: errors.BookBadRequest{},
+			id:            1,
+		},
+		{
+			testName: "Test Unsuccessful: Exec returns error",
+			input: entity.Book{
+				Title:       "test title 2",
+				Author:      "test author 2",
+				Year:        2,
+				Description: "test description 2",
+			},
+			expectedOutput: entity.Book{
+				ID:          3,
+				Title:       "test title 2",
+				Author:      "test author 2",
+				Year:        2,
+				Description: "test description 2",
+			},
+			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
+			mockFunc: func() {
+				mock.ExpectExec(regexp.QuoteMeta(queryUpdateBook)).WithArgs(3, "test title 2", "test author 2", 2, "test description 2").WillReturnError(goerrors.New("sql: database is closed"))
 			},
 			mockRepo: repo,
 			id:       3,

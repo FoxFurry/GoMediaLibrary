@@ -152,12 +152,9 @@ func (r *BookDBRepository) SearchByTitle(title string) (*entity.Book, error) {
 }
 
 func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity.Book, error) {
-	returnBook := *book
-	returnBook.ID = bookID
-
 	if bookID < 1 {
 		log.Printf("Serial is less than 1")
-		return &returnBook, errors.BookBadRequest{}
+		return nil, errors.BookBadRequest{}
 	} else if !book.IsValid() {
 		log.Printf("Invalid request: %v", book)
 		return book, errors.BookBadRequest{}
@@ -165,12 +162,14 @@ func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity
 
 	_, err := r.database.Exec(queryUpdateBook, bookID, book.Title, book.Author, book.Year, book.Description)
 
+	returnBook := *book
+	returnBook.ID = bookID
 	if err != nil {
 		log.Printf("Unable to update book: %v", err)
-		return &returnBook, err
+		return nil, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
-	return &returnBook, err
+	return &returnBook, nil
 }
 
 func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
