@@ -550,7 +550,7 @@ func TestBookDBRepository_UpdateBook(t *testing.T) {
 		},
 		{
 			testName:      "Test Unsuccessful: Invalid book id",
-			expectedError: errors.BookBadRequest{},
+			expectedError: errors.BookInvalidSerial{},
 			id:            0,
 		},
 		{
@@ -625,7 +625,7 @@ func TestBookDBRepository_DeleteBook(t *testing.T) {
 		},
 		{
 			testName: "Test Unsuccessful: Invalid book id",
-			expectedError: errors.BookBadRequest{},
+			expectedError: errors.BookInvalidSerial{},
 			id: 0,
 		},
 		{

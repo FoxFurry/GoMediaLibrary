@@ -28,6 +28,8 @@ type BookCouldNotQuery struct{
 	Msg string
 }
 
+type BookInvalidSerial struct{}
+
 func (b BookNotFoundByTitle) Error() string {
 	return fmt.Sprintf("Book(s) with title %v not found in db", b.Title)
 }
@@ -56,15 +58,15 @@ func (b BookCouldNotQuery) Error() string {
 	return fmt.Sprintf("Could not execute query: %v", b.Msg)
 }
 
+func (b BookInvalidSerial) Error() string {
+	return "Invalid serial. Serial must be more than 1"
+}
+
 func HandleBookError(c *gin.Context, err error) {
 	switch err.(type) {
-	case BookNotFound:
+	case BookNotFound, BookNotFoundByAuthor, BookNotFoundByTitle:
 		server.RespondNotFound(c, err.Error())
-	case BookNotFoundByAuthor:
-		server.RespondNotFound(c, err.Error())
-	case BookNotFoundByTitle:
-		server.RespondNotFound(c, err.Error())
-	case BookBadRequest:
+	case BookBadRequest, BookInvalidSerial:
 		server.RespondBadRequest(c, err.Error())
 	case BookTitleAlreadyExists:
 		server.RespondAlreadyExists(c, err.Error())

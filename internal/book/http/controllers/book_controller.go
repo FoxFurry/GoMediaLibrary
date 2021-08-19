@@ -9,21 +9,21 @@ import (
 	"strconv"
 )
 
-type BookApp struct {
+type BookService struct {
 	dbRepo bookDB.BookDBRepository
 }
 
-func NewBookApp(db *sql.DB) BookApp {
-	return BookApp{
+func NewBookService(db *sql.DB) BookService {
+	return BookService{
 		dbRepo: bookDB.NewBookRepo(db),
 	}
 }
 
-func (b *BookApp) SaveBook(c *gin.Context) {
+func (b *BookService) SaveBook(c *gin.Context) {
 	var book entity.Book
 
 	if err := c.BindJSON(&book); err != nil {
-		errors.HandleBookError(c, err)
+		errors.HandleBookError(c, errors.BookBadRequest{})
 		return
 	}
 
@@ -36,7 +36,7 @@ func (b *BookApp) SaveBook(c *gin.Context) {
 	c.JSON(200, saveBook)
 }
 
-func (b *BookApp) GetBook(c *gin.Context) {
+func (b *BookService) GetBook(c *gin.Context) {
 	params := c.Param("id")
 	id, err := strconv.Atoi(params)
 
@@ -54,7 +54,7 @@ func (b *BookApp) GetBook(c *gin.Context) {
 	c.JSON(200, getBook)
 }
 
-func (b *BookApp) GetAllBooks(c *gin.Context) {
+func (b *BookService) GetAllBooks(c *gin.Context) {
 	books, err := b.dbRepo.GetAllBooks()
 	if err != nil {
 		errors.HandleBookError(c, err)
@@ -64,7 +64,7 @@ func (b *BookApp) GetAllBooks(c *gin.Context) {
 	c.JSON(200, books)
 }
 
-func (b *BookApp) SearchByAuthor(c *gin.Context) {
+func (b *BookService) SearchByAuthor(c *gin.Context) {
 	author := c.Param("author")
 
 	byAuthor, err := b.dbRepo.SearchByAuthor(author)
@@ -76,7 +76,7 @@ func (b *BookApp) SearchByAuthor(c *gin.Context) {
 	c.JSON(200, byAuthor)
 }
 
-func (b *BookApp) SearchByTitle(c *gin.Context) {
+func (b *BookService) SearchByTitle(c *gin.Context) {
 	title := c.Param("title")
 
 	byTitle, err := b.dbRepo.SearchByTitle(title)
@@ -88,7 +88,7 @@ func (b *BookApp) SearchByTitle(c *gin.Context) {
 	c.JSON(200, byTitle)
 }
 
-func (b *BookApp) UpdateBook(c *gin.Context) {
+func (b *BookService) UpdateBook(c *gin.Context) {
 	params := c.Param("id")
 	id, err := strconv.Atoi(params)
 
@@ -99,8 +99,8 @@ func (b *BookApp) UpdateBook(c *gin.Context) {
 
 	var book *entity.Book
 
-	if err := c.BindJSON(book); err != nil {
-		errors.HandleBookError(c, err)
+	if err = c.BindJSON(book); err != nil {
+		errors.HandleBookError(c, errors.BookBadRequest{})
 		return
 	}
 
@@ -113,7 +113,7 @@ func (b *BookApp) UpdateBook(c *gin.Context) {
 	c.JSON(200, updatedRows)
 }
 
-func (b *BookApp) DeleteBook(c *gin.Context) {
+func (b *BookService) DeleteBook(c *gin.Context) {
 	params := c.Param("id")
 	id, err := strconv.Atoi(params)
 
@@ -131,7 +131,7 @@ func (b *BookApp) DeleteBook(c *gin.Context) {
 	c.JSON(200, deletedRows)
 }
 
-func (b *BookApp) DeleteAllBooks(c *gin.Context) {
+func (b *BookService) DeleteAllBooks(c *gin.Context) {
 	deletedRows, err := b.dbRepo.DeleteAllBooks()
 	if err != nil {
 		errors.HandleBookError(c, err)

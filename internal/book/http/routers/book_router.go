@@ -7,7 +7,7 @@ import (
 )
 
 func RegisterBookRoutes(router *gin.Engine, db *sql.DB) {
-	bookRepo := controllers.NewBookApp(db)
+	bookRepo := controllers.NewBookService(db)
 
 	book := router.Group("/book")
 	{
