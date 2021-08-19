@@ -3,6 +3,7 @@ package controllers
 import (
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/foxfurry/simple-rest/internal/book/http/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -67,28 +68,20 @@ func TestBookService_SaveBook(t *testing.T) {
 		},
 		{
 			testName: "Test Unsuccessful: Invalid request body",
-			mockFunc: func() {
-				rows := sqlmock.NewRows([]string{"id"}).AddRow(1)
-				mock.ExpectQuery(regexp.QuoteMeta(querySaveBook)).WithArgs("Test 1", "Test 1", 1, "Test 1").WillReturnRows(rows)
-			},
 			service:        repo,
 			requestBody:    "{\"title\":\"\",\"author\":\"Test 1\",\"year\":1,\"description\":\"Test 1\"}",
 			url:            saveUrl,
 			method:         saveMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Title, author and year are mandatory fields",
+			expectedBody:   errors.BookBadRequest{}.Error(),
 		},
 		{
 			testName: "Test Unsuccessful: Empty request body",
-			mockFunc: func() {
-				rows := sqlmock.NewRows([]string{"id"}).AddRow(1)
-				mock.ExpectQuery(regexp.QuoteMeta(querySaveBook)).WithArgs("Test 1", "Test 1", 1, "Test 1").WillReturnRows(rows)
-			},
 			service:        repo,
 			url:            saveUrl,
 			method:         saveMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Title, author and year are mandatory fields",
+			expectedBody:   errors.BookBadRequest{}.Error(),
 		},
 	}
 
