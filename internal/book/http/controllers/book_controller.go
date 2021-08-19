@@ -41,7 +41,7 @@ func (b *BookService) GetBook(c *gin.Context) {
 	id, err := strconv.Atoi(params)
 
 	if err != nil {
-		errors.HandleBookError(c, err)
+		errors.HandleBookError(c, errors.BookInvalidSerial{})
 		return
 	}
 
@@ -93,18 +93,18 @@ func (b *BookService) UpdateBook(c *gin.Context) {
 	id, err := strconv.Atoi(params)
 
 	if err != nil {
-		errors.HandleBookError(c, err)
+		errors.HandleBookError(c, errors.BookInvalidSerial{})
 		return
 	}
 
-	var book *entity.Book
+	var book entity.Book
 
-	if err = c.BindJSON(book); err != nil {
+	if err = c.BindJSON(&book); err != nil {
 		errors.HandleBookError(c, errors.BookBadRequest{})
 		return
 	}
 
-	updatedRows, err := b.dbRepo.UpdateBook(uint64(id), book)
+	updatedRows, err := b.dbRepo.UpdateBook(uint64(id), &book)
 	if err != nil {
 		errors.HandleBookError(c, err)
 		return
@@ -118,7 +118,7 @@ func (b *BookService) DeleteBook(c *gin.Context) {
 	id, err := strconv.Atoi(params)
 
 	if err != nil {
-		errors.HandleBookError(c, err)
+		errors.HandleBookError(c, errors.BookInvalidSerial{})
 		return
 	}
 

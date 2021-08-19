@@ -77,7 +77,7 @@ func TestBookDBRepository_SaveBook(t *testing.T) {
 				Description: "test description",
 			},
 			expectedOutput: entity.Book{},
-			expectedError:  errors.BookBadScanOptions{Msg: "sql: no rows in result set"},
+			expectedError:  errors.BookCouldNotQuery{Msg: "sql: no rows in result set"},
 			mockFunc: func() {
 				rows := mock.NewRows([]string{"id"})
 				mock.ExpectQuery(regexp.QuoteMeta(querySaveBook)).WithArgs("test title", "test author", 1, "test description").WillReturnRows(rows)
@@ -137,13 +137,19 @@ func TestBookDBRepository_GetBook(t *testing.T) {
 		{
 			testName:       "Test Unsuccessful: Book not found",
 			expectedOutput: entity.Book{},
-			expectedError:  errors.BookNotFound{},
+			expectedError:  errors.BooksNotFound{},
 			mockFunc: func() {
 				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"})
 				mock.ExpectQuery(regexp.QuoteMeta(queryGetBook)).WithArgs(2).WillReturnRows(rows)
 			},
 			mockRepo: repo,
 			getID:    2,
+		},
+		{
+			testName:      "Test Unsuccessful: Invalid serial",
+			expectedError: errors.BookInvalidSerial{},
+			mockRepo:      repo,
+			getID:         0,
 		},
 	}
 
@@ -265,7 +271,7 @@ func TestBookDBRepository_GetAllBooks(t *testing.T) {
 					Description: "test description 3",
 				},
 			},
-			expectedError: errors.BookNotFound{},
+			expectedError: errors.BooksNotFound{},
 			mockFunc: func() {
 				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"})
 				mock.ExpectQuery(regexp.QuoteMeta(queryGetAll)).WillReturnRows(rows)
@@ -273,7 +279,7 @@ func TestBookDBRepository_GetAllBooks(t *testing.T) {
 			mockRepo: repo,
 		},
 		{ // DO NOT ADD ANY TC AFTER THIS ONE. IN THIS TC DB IS BEING CLOSED AND NOT REOPENED FOR REST OF TEST
-			testName: "Test Unsuccessful: DB is closed",
+			testName:      "Test Unsuccessful: DB is closed",
 			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
 			mockFunc: func() {
 				db.Close()
@@ -598,7 +604,6 @@ func TestBookDBRepository_UpdateBook(t *testing.T) {
 	}
 }
 
-
 func TestBookDBRepository_DeleteBook(t *testing.T) {
 	db, mock := newMock()
 	defer db.Close()
@@ -614,9 +619,9 @@ func TestBookDBRepository_DeleteBook(t *testing.T) {
 		id             uint64
 	}{
 		{
-			testName: "Test Successful",
+			testName:       "Test Successful",
 			expectedOutput: 1,
-			expectedError: nil,
+			expectedError:  nil,
 			mockFunc: func() {
 				mock.ExpectExec(regexp.QuoteMeta(queryDeleteBook)).WithArgs(1).WillReturnResult(sqlmock.NewResult(0, 1))
 			},
@@ -624,36 +629,36 @@ func TestBookDBRepository_DeleteBook(t *testing.T) {
 			id:       1,
 		},
 		{
-			testName: "Test Unsuccessful: Invalid book id",
+			testName:      "Test Unsuccessful: Invalid book id",
 			expectedError: errors.BookInvalidSerial{},
-			id: 0,
+			id:            0,
 		},
 		{
-			testName: "Test Unsuccessful: Book not found",
-			expectedError: errors.BookNotFound{},
+			testName:      "Test Unsuccessful: Book not found",
+			expectedError: errors.BooksNotFound{},
 			mockFunc: func() {
-				mock.ExpectExec(regexp.QuoteMeta(queryDeleteBook)).WithArgs(1).WillReturnResult(sqlmock.NewResult(0,0))
+				mock.ExpectExec(regexp.QuoteMeta(queryDeleteBook)).WithArgs(1).WillReturnResult(sqlmock.NewResult(0, 0))
 			},
 			mockRepo: repo,
-			id: 1,
+			id:       1,
 		},
 		{
-			testName: "Test Unsuccessful: Invalid rows affected",
+			testName:      "Test Unsuccessful: Invalid rows affected",
 			expectedError: errors.BookCouldNotQuery{Msg: "no RowsAffected available after DDL statement"},
 			mockFunc: func() {
 				mock.ExpectExec(regexp.QuoteMeta(queryDeleteBook)).WithArgs(1).WillReturnResult(sqlmock.NewErrorResult(goerrors.New("no RowsAffected available after DDL statement")))
 			},
 			mockRepo: repo,
-			id: 1,
+			id:       1,
 		},
 		{
-			testName: "Test Unsuccessful: DB is closed",
+			testName:      "Test Unsuccessful: DB is closed",
 			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
 			mockFunc: func() {
 				db.Close()
 			},
 			mockRepo: repo,
-			id: 1,
+			id:       1,
 		},
 	}
 
@@ -688,41 +693,40 @@ func TestBookDBRepository_DeleteAllBooks(t *testing.T) {
 		mockRepo       BookDBRepository
 	}{
 		{
-			testName: "Test Successful",
+			testName:       "Test Successful",
 			expectedOutput: 4,
-			expectedError: nil,
+			expectedError:  nil,
 			mockFunc: func() {
 				mock.ExpectExec(regexp.QuoteMeta(queryDeleteAllBooksAndAlter)).WillReturnResult(sqlmock.NewResult(0, 4))
 			},
 			mockRepo: repo,
 		},
 		{
-			testName: "Test Unsuccessful: Invalid rows affected",
+			testName:       "Test Unsuccessful: Invalid rows affected",
 			expectedOutput: 0,
-			expectedError: errors.BookCouldNotQuery{Msg: "no RowsAffected available after DDL statement"},
+			expectedError:  errors.BookCouldNotQuery{Msg: "no RowsAffected available after DDL statement"},
 			mockFunc: func() {
 				mock.ExpectExec(regexp.QuoteMeta(queryDeleteAllBooksAndAlter)).WillReturnResult(sqlmock.NewErrorResult(goerrors.New("no RowsAffected available after DDL statement")))
 			},
 			mockRepo: repo,
 		},
 		{
-			testName: "Test Unsuccessful: Books not found",
+			testName:       "Test Unsuccessful: Books not found",
 			expectedOutput: 0,
-			expectedError: errors.BookNotFound{},
+			expectedError:  errors.BooksNotFound{},
 			mockFunc: func() {
 				mock.ExpectExec(regexp.QuoteMeta(queryDeleteAllBooksAndAlter)).WillReturnResult(sqlmock.NewResult(0, 0))
 			},
 			mockRepo: repo,
 		},
 		{
-			testName: "Test Unsuccessful: DB is closed",
+			testName:      "Test Unsuccessful: DB is closed",
 			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
 			mockFunc: func() {
 				db.Close()
 			},
 			mockRepo: repo,
 		},
-
 	}
 
 	for _, test := range updateBookMocks {
