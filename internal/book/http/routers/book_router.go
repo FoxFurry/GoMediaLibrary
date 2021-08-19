@@ -3,19 +3,24 @@ package routers
 import (
 	"database/sql"
 	"github.com/foxfurry/simple-rest/internal/book/http/controllers"
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 )
 
-func RegisterBookRoutes(router *mux.Router, db *sql.DB) {
+func RegisterBookRoutes(router *gin.Engine, db *sql.DB) {
 	bookRepo := controllers.NewBookApp(db)
 
-	router.HandleFunc("/book/author=\"{author}\"", bookRepo.SearchByAuthor).Methods("GET", "OPTIONS")
-	router.HandleFunc("/book/title=\"{title}\"", bookRepo.SearchByTitle).Methods("GET", "OPTIONS")
-	router.HandleFunc("/book/{id}", bookRepo.GetBook).Methods("GET", "OPTIONS")
-	router.HandleFunc("/book", bookRepo.GetAllBooks).Methods("GET", "OPTIONS")
+	book := router.Group("/book")
+	{
+		book.GET("/:id", bookRepo.GetBook)
+		book.GET("/title/:title", bookRepo.SearchByTitle)
+		book.GET("/author/:author", bookRepo.SearchByAuthor)
+		book.GET("/", bookRepo.GetAllBooks)
 
-	router.HandleFunc("/book", bookRepo.SaveBook).Methods("POST", "OPTIONS")
-	router.HandleFunc("/book", bookRepo.UpdateBook).Methods("PUT", "OPTIONS")
-	router.HandleFunc("/book", bookRepo.DeleteAllBooks).Methods("DELETE", "OPTIONS")
-	router.HandleFunc("/book/{id}", bookRepo.DeleteBook).Methods("DELETE", "OPTIONS")
+		book.POST("/", bookRepo.SaveBook)
+
+		book.PUT("/", bookRepo.UpdateBook)
+
+		book.DELETE("/:id", bookRepo.DeleteBook)
+		book.DELETE("/", bookRepo.DeleteAllBooks)
+	}
 }

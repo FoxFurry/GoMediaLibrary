@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	goerrors "errors"
 	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
 	"github.com/foxfurry/simple-rest/internal/book/domain/repository"
 	"github.com/foxfurry/simple-rest/internal/book/http/errors"
@@ -26,8 +25,8 @@ const (
 	querySearchByAuthorBook = `SELECT * FROM bookstore WHERE author=$1`
 	querySearchByTitleBook  = `SELECT * FROM bookstore WHERE title=$1`
 	queryUpdateBook         = `UPDATE bookstore SET title=$2, author=$3, year=$4, description=$5 WHERE id=$1`
-	queryDeleteBook = `DELETE FROM bookstore WHERE id=$1`
-	queryDeleteAllAndAlterBooks = `DELETE FROM bookstore; ALTER SEQUENCE bookstore_id_seq RESTART WITH 1`
+	queryDeleteBook             = `DELETE FROM bookstore WHERE id=$1`
+	queryDeleteAllBooksAndAlter = `DELETE FROM bookstore; ALTER SEQUENCE bookstore_id_seq RESTART WITH 1`
 )
 
 func (r *BookDBRepository) SaveBook(book *entity.Book) (*entity.Book, error) {
@@ -153,27 +152,24 @@ func (r *BookDBRepository) SearchByTitle(title string) (*entity.Book, error) {
 }
 
 func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity.Book, error) {
-	returnBook := *book
-	returnBook.ID = bookID
-
 	if bookID < 1 {
 		log.Printf("Serial is less than 1")
-		return &returnBook, errors.BookBadRequest{}
+		return nil, errors.BookBadRequest{}
 	} else if !book.IsValid() {
 		log.Printf("Invalid request: %v", book)
 		return book, errors.BookBadRequest{}
-	} else if _, err := r.GetBook(bookID); goerrors.Is(err, errors.BookNotFound{}) {
-		log.Printf("Book does not exists")
 	}
 
 	_, err := r.database.Exec(queryUpdateBook, bookID, book.Title, book.Author, book.Year, book.Description)
 
+	returnBook := *book
+	returnBook.ID = bookID
 	if err != nil {
 		log.Printf("Unable to update book: %v", err)
-		return &returnBook, err
+		return nil, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
-	return &returnBook, err
+	return &returnBook, nil
 }
 
 func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
@@ -185,14 +181,14 @@ func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
 
 	if err != nil {
 		log.Printf("Unable to delete book: %v", err)
-		return 0, err
+		return 0, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
 	rowsAffected, err := res.RowsAffected()
 
 	if err != nil {
 		log.Printf("Unable to get affected rows book: %v", err)
-		return 0, err
+		return 0, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
 	if rowsAffected == 0 {
@@ -205,18 +201,18 @@ func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
 }
 
 func (r *BookDBRepository) DeleteAllBooks() (int64, error) {
-	res, err := r.database.Exec(queryDeleteAllAndAlterBooks)
+	res, err := r.database.Exec(queryDeleteAllBooksAndAlter)
 
 	if err != nil {
 		log.Printf("Unable to delete book or alter the sequence: %v", err)
-		return 0, err
+		return 0, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
 	rowsAffected, err := res.RowsAffected()
 
 	if err != nil {
 		log.Printf("Unable to get affected rows book: %v", err)
-		return 0, err
+		return 0, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
 	if rowsAffected == 0 {

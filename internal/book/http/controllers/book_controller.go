@@ -2,12 +2,10 @@ package controllers
 
 import (
 	"database/sql"
-	"encoding/json"
 	bookDB "github.com/foxfurry/simple-rest/internal/book/db"
 	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
 	"github.com/foxfurry/simple-rest/internal/book/http/errors"
-	"github.com/gorilla/mux"
-	"net/http"
+	"github.com/gin-gonic/gin"
 	"strconv"
 )
 
@@ -21,152 +19,124 @@ func NewBookApp(db *sql.DB) BookApp {
 	}
 }
 
-func (b *BookApp) SaveBook(w http.ResponseWriter, r *http.Request) {
+func (b *BookApp) SaveBook(c *gin.Context) {
 	var book entity.Book
 
-	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
-		errors.HandleBookError(w, err)
+	if err := c.BindJSON(&book); err != nil {
+		errors.HandleBookError(c, err)
 		return
 	}
 
 	saveBook, err := b.dbRepo.SaveBook(&book)
 	if err != nil {
-		errors.HandleBookError(w, err)
+		errors.HandleBookError(c, err)
 		return
 	}
 
-	if err = json.NewEncoder(w).Encode(saveBook); err != nil {
-		errors.HandleBookError(w, err)
-		return
-	}
-
+	c.JSON(200, saveBook)
 }
 
-func (b *BookApp) GetBook(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
+func (b *BookApp) GetBook(c *gin.Context) {
+	params := c.Param("id")
+	id, err := strconv.Atoi(params)
 
 	if err != nil {
-		errors.HandleBookError(w, err)
+		errors.HandleBookError(c, err)
 		return
 	}
 
 	getBook, err := b.dbRepo.GetBook(uint64(id))
 	if err != nil {
-		errors.HandleBookError(w, err)
+		errors.HandleBookError(c, err)
 		return
 	}
 
-	if err = json.NewEncoder(w).Encode(getBook); err != nil {
-		errors.HandleBookError(w, err)
-		return
-	}
+	c.JSON(200, getBook)
 }
 
-func (b *BookApp) GetAllBooks(w http.ResponseWriter, _ *http.Request) {
+func (b *BookApp) GetAllBooks(c *gin.Context) {
 	books, err := b.dbRepo.GetAllBooks()
 	if err != nil {
-		errors.HandleBookError(w, err)
+		errors.HandleBookError(c, err)
 		return
 	}
 
-	if err = json.NewEncoder(w).Encode(books); err != nil {
-		errors.HandleBookError(w, err)
-		return
-	}
-
+	c.JSON(200, books)
 }
 
-func (b *BookApp) SearchByAuthor(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	author := params["author"]
+func (b *BookApp) SearchByAuthor(c *gin.Context) {
+	author := c.Param("author")
 
 	byAuthor, err := b.dbRepo.SearchByAuthor(author)
 	if err != nil {
-		errors.HandleBookError(w, err)
+		errors.HandleBookError(c, err)
 		return
 	}
 
-	if err = json.NewEncoder(w).Encode(byAuthor); err != nil {
-		errors.HandleBookError(w, err)
-		return
-	}
+	c.JSON(200, byAuthor)
 }
 
-func (b *BookApp) SearchByTitle(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	author := params["title"]
+func (b *BookApp) SearchByTitle(c *gin.Context) {
+	title := c.Param("title")
 
-	byTitle, err := b.dbRepo.SearchByTitle(author)
+	byTitle, err := b.dbRepo.SearchByTitle(title)
 	if err != nil {
-		errors.HandleBookError(w, err)
+		errors.HandleBookError(c, err)
 		return
 	}
 
-	if err = json.NewEncoder(w).Encode(byTitle); err != nil {
-		errors.HandleBookError(w, err)
-		return
-	}
+	c.JSON(200, byTitle)
 }
 
-func (b *BookApp) UpdateBook(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
+func (b *BookApp) UpdateBook(c *gin.Context) {
+	params := c.Param("id")
+	id, err := strconv.Atoi(params)
 
 	if err != nil {
-		errors.HandleBookError(w, err)
+		errors.HandleBookError(c, err)
 		return
 	}
 
 	var book *entity.Book
 
-	if err = json.NewDecoder(r.Body).Decode(book); err != nil {
-		errors.HandleBookError(w, err)
+	if err := c.BindJSON(book); err != nil {
+		errors.HandleBookError(c, err)
 		return
 	}
 
 	updatedRows, err := b.dbRepo.UpdateBook(uint64(id), book)
 	if err != nil {
-		errors.HandleBookError(w, err)
+		errors.HandleBookError(c, err)
 		return
 	}
 
-	if err = json.NewEncoder(w).Encode(updatedRows); err != nil {
-		errors.HandleBookError(w, err)
-		return
-	}
+	c.JSON(200, updatedRows)
 }
 
-func (b *BookApp) DeleteBook(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
+func (b *BookApp) DeleteBook(c *gin.Context) {
+	params := c.Param("id")
+	id, err := strconv.Atoi(params)
 
 	if err != nil {
-		errors.HandleBookError(w, err)
+		errors.HandleBookError(c, err)
 		return
 	}
 
 	deletedRows, err := b.dbRepo.DeleteBook(uint64(id))
 	if err != nil {
-		errors.HandleBookError(w, err)
+		errors.HandleBookError(c, err)
 		return
 	}
 
-	if err = json.NewEncoder(w).Encode(deletedRows); err != nil {
-		errors.HandleBookError(w, err)
-		return
-	}
+	c.JSON(200, deletedRows)
 }
 
-func (b *BookApp) DeleteAllBooks(w http.ResponseWriter, r *http.Request) {
+func (b *BookApp) DeleteAllBooks(c *gin.Context) {
 	deletedRows, err := b.dbRepo.DeleteAllBooks()
 	if err != nil {
-		errors.HandleBookError(w, err)
+		errors.HandleBookError(c, err)
 		return
 	}
 
-	if err = json.NewEncoder(w).Encode(deletedRows); err != nil {
-		errors.HandleBookError(w, err)
-		return
-	}
+	c.JSON(200, deletedRows)
 }

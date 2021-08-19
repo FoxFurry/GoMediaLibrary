@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	goerrors "errors"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
 	"github.com/foxfurry/simple-rest/internal/book/http/errors"
@@ -273,33 +274,8 @@ func TestBookDBRepository_GetAllBooks(t *testing.T) {
 		},
 		{ // DO NOT ADD ANY TC AFTER THIS ONE. IN THIS TC DB IS BEING CLOSED AND NOT REOPENED FOR REST OF TEST
 			testName: "Test Unsuccessful: DB is closed",
-			expectedOutput: []entity.Book{
-				{
-					ID:          1,
-					Title:       "test title 1",
-					Author:      "test author 1",
-					Year:        1,
-					Description: "test description 1",
-				},
-				{
-					ID:          2,
-					Title:       "test title 2",
-					Author:      "test author 2",
-					Year:        2,
-					Description: "test description 2",
-				},
-				{
-					ID:          3,
-					Title:       "test title 3",
-					Author:      "test author 3",
-					Year:        3,
-					Description: "test description 3",
-				},
-			},
 			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
 			mockFunc: func() {
-				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"})
-				mock.ExpectQuery(regexp.QuoteMeta(queryGetAll)).WillReturnRows(rows)
 				db.Close()
 			},
 			mockRepo: repo,
@@ -541,7 +517,7 @@ func TestBookDBRepository_UpdateBook(t *testing.T) {
 
 	repo := NewBookRepo(db)
 
-	searchByAuthorMocks := []struct {
+	updateBookMocks := []struct {
 		testName       string
 		input          entity.Book
 		expectedOutput entity.Book
@@ -553,33 +529,59 @@ func TestBookDBRepository_UpdateBook(t *testing.T) {
 		{
 			testName: "Test Successful",
 			input: entity.Book{
-				Title:       "test title",
-				Author:      "test author",
-				Year:        1,
-				Description: "test description 1",
+				Title:       "test title 2",
+				Author:      "test author 2",
+				Year:        2,
+				Description: "test description 2",
 			},
 			expectedOutput: entity.Book{
 				ID:          3,
-				Title:       "test title",
-				Author:      "test author",
-				Year:        1,
-				Description: "test description 1",
+				Title:       "test title 2",
+				Author:      "test author 2",
+				Year:        2,
+				Description: "test description 2",
 			},
 			expectedError: nil,
 			mockFunc: func() {
-				rowsFirstQuery := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"}).
-					AddRow(3, "test title", "test author", 1, "test description 1")
-				rowsSecondQuery := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"}).
-					AddRow(3, "test title", "test author", 1, "test description 1")
-				mock.ExpectQuery(regexp.QuoteMeta(queryGetBook)).WithArgs(3).WillReturnRows(rowsFirstQuery)
-				mock.ExpectQuery(regexp.QuoteMeta(queryUpdateBook)).WithArgs(3, "test title", "test author", 1, "test description 1").WillReturnRows(rowsSecondQuery)
+				mock.ExpectExec(regexp.QuoteMeta(queryUpdateBook)).WithArgs(3, "test title 2", "test author 2", 2, "test description 2").WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+			mockRepo: repo,
+			id:       3,
+		},
+		{
+			testName:      "Test Unsuccessful: Invalid book id",
+			expectedError: errors.BookBadRequest{},
+			id:            0,
+		},
+		{
+			testName: "Test Unsuccessful: Invalid book",
+			input: entity.Book{
+				Title:       "",
+				Author:      "",
+				Year:        0,
+				Description: "",
+			},
+			expectedError: errors.BookBadRequest{},
+			id:            1,
+		},
+		{
+			testName: "Test Unsuccessful: DB is closed",
+			input: entity.Book{
+				Title:       "test title 2",
+				Author:      "test author 2",
+				Year:        2,
+				Description: "test description 2",
+			},
+			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
+			mockFunc: func() {
+				db.Close()
 			},
 			mockRepo: repo,
 			id:       3,
 		},
 	}
 
-	for _, test := range searchByAuthorMocks {
+	for _, test := range updateBookMocks {
 		t.Run(test.testName, func(t *testing.T) {
 			if test.mockFunc != nil {
 				test.mockFunc()
@@ -596,144 +598,146 @@ func TestBookDBRepository_UpdateBook(t *testing.T) {
 	}
 }
 
-//
-//func TestBookDBRepository_DeleteBook(t *testing.T) {
-//	deleteBookMocks := []BookDBMock{
-//		{
-//			TestName: "Test Successful",
-//			Input: entity.Book{
-//				ID:          1,
-//				Title:       "Test 1",
-//				Author:      "Test 1",
-//				Year:        1,
-//				Description: "Test 1",
-//			},
-//			ExpectedRows:  1,
-//			ExpectedError: nil,
-//		},
-//		{
-//			TestName: "Test Unsuccessful Book Not Found",
-//			Input: entity.Book{
-//				ID:          2,
-//				Title:       "Test 1",
-//				Author:      "Test 1",
-//				Year:        1,
-//				Description: "Test 1",
-//			},
-//			ExpectedRows:  1,
-//			ExpectedError: errors.BookNotFound{},
-//		},
-//		{
-//			TestName: "Test Unsuccessful Invalid ID",
-//			Input: entity.Book{
-//				ID:          0,
-//				Title:       "Test 1",
-//				Author:      "Test 1",
-//				Year:        1,
-//				Description: "Test 1",
-//			},
-//			ExpectedRows:  0,
-//			ExpectedError: errors.BookBadRequest{},
-//		},
-//	}
-//
-//	for _, c := range deleteBookMocks {
-//		if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
-//			t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
-//		}
-//		c := c // To isolate test cases and be sure they won't be changed
-//		t.Run(c.TestName, func(t *testing.T) {
-//			_, err := repo.SaveBook(&c.Input)
-//			if err != nil {
-//				t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
-//			}
-//			rows, err := repo.DeleteBook(c.Input.ID)
-//			if err != nil {
-//				assert.True(t, goerrors.Is(err, c.ExpectedError), "Errors are not same:\nExpected: %v\nActual: %v", c.ExpectedError, err)
-//			} else {
-//				assert.Equal(t, rows, c.ExpectedRows)
-//			}
-//		})
-//	}
-//}
-//
-//func TestBookDBRepository_DeleteAllBooks(t *testing.T) {
-//	deleteAllBooksMocks := []BookDBMock{
-//		{
-//			TestName: "Test Successful",
-//			InputArray: []entity.Book{
-//				{
-//					Title:       "Test 1",
-//					Author:      "Test 1",
-//					Year:        1,
-//					Description: "Test 1",
-//				},
-//				{
-//					Title:       "Test 2",
-//					Author:      "Test 2",
-//					Year:        2,
-//					Description: "Test 2",
-//				},
-//			},
-//			ExpectedRows:  2,
-//			ExpectedError: nil,
-//		},
-//		{
-//			TestName: "Test Successful",
-//			InputArray: []entity.Book{
-//				{
-//					Title:       "Test 1",
-//					Author:      "Test 1",
-//					Year:        1,
-//					Description: "Test 1",
-//				},
-//				{
-//					Title:       "Test 2",
-//					Author:      "Test 2",
-//					Year:        2,
-//					Description: "Test 2",
-//				},
-//				{
-//					Title:       "Test 3",
-//					Author:      "Test 3",
-//					Year:        3,
-//					Description: "Test 3",
-//				},
-//				{
-//					Title:       "Test 4",
-//					Author:      "Test 4",
-//					Year:        4,
-//					Description: "Test 4",
-//				},
-//				{
-//					Title:       "Test 5",
-//					Author:      "Test 5",
-//					Year:        5,
-//					Description: "Test 5",
-//				},
-//			},
-//			ExpectedRows:  5,
-//			ExpectedError: nil,
-//		},
-//	}
-//	for _, c := range deleteAllBooksMocks {
-//		if _, err := repo.DeleteAllBooks(); err != nil && !goerrors.Is(err, errors.BookNotFound{}) {
-//			t.Errorf(fmt.Sprintf("Could not delete all the books: %v", err))
-//		}
-//		c := c // To isolate test cases and be sure they won't be changed
-//		t.Run(c.TestName, func(t *testing.T) {
-//			for _, val := range c.InputArray {
-//				if _, err := repo.SaveBook(&val); err != nil {
-//					t.Errorf(fmt.Sprintf("Could not save the book: %v: ", err))
-//				}
-//			}
-//
-//			rows, err := repo.DeleteAllBooks()
-//			if err != nil {
-//				assert.True(t, goerrors.Is(err, c.ExpectedError), "Errors are not same:\nExpected: %v\nActual: %v", c.ExpectedError, err)
-//			} else {
-//				assert.Equal(t, rows, c.ExpectedRows)
-//			}
-//		})
-//	}
-//}
+
+func TestBookDBRepository_DeleteBook(t *testing.T) {
+	db, mock := newMock()
+	defer db.Close()
+
+	repo := NewBookRepo(db)
+
+	updateBookMocks := []struct {
+		testName       string
+		expectedOutput int64
+		expectedError  error
+		mockFunc       func()
+		mockRepo       BookDBRepository
+		id             uint64
+	}{
+		{
+			testName: "Test Successful",
+			expectedOutput: 1,
+			expectedError: nil,
+			mockFunc: func() {
+				mock.ExpectExec(regexp.QuoteMeta(queryDeleteBook)).WithArgs(1).WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+			mockRepo: repo,
+			id:       1,
+		},
+		{
+			testName: "Test Unsuccessful: Invalid book id",
+			expectedError: errors.BookBadRequest{},
+			id: 0,
+		},
+		{
+			testName: "Test Unsuccessful: Book not found",
+			expectedError: errors.BookNotFound{},
+			mockFunc: func() {
+				mock.ExpectExec(regexp.QuoteMeta(queryDeleteBook)).WithArgs(1).WillReturnResult(sqlmock.NewResult(0,0))
+			},
+			mockRepo: repo,
+			id: 1,
+		},
+		{
+			testName: "Test Unsuccessful: Invalid rows affected",
+			expectedError: errors.BookCouldNotQuery{Msg: "no RowsAffected available after DDL statement"},
+			mockFunc: func() {
+				mock.ExpectExec(regexp.QuoteMeta(queryDeleteBook)).WithArgs(1).WillReturnResult(sqlmock.NewErrorResult(goerrors.New("no RowsAffected available after DDL statement")))
+			},
+			mockRepo: repo,
+			id: 1,
+		},
+		{
+			testName: "Test Unsuccessful: DB is closed",
+			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
+			mockFunc: func() {
+				db.Close()
+			},
+			mockRepo: repo,
+			id: 1,
+		},
+	}
+
+	for _, test := range updateBookMocks {
+		t.Run(test.testName, func(t *testing.T) {
+			if test.mockFunc != nil {
+				test.mockFunc()
+			}
+
+			res, err := test.mockRepo.DeleteBook(test.id)
+			if (err != nil) && (err != test.expectedError) {
+				t.Errorf("Unexpected error:\nExpected: %v\nActual: %v", test.expectedError, err)
+				return
+			} else if (err == nil) && res != test.expectedOutput {
+				t.Errorf("Unexpected result:\nExpected: %v\nActual: %v", test.expectedOutput, res)
+			}
+		})
+	}
+}
+
+func TestBookDBRepository_DeleteAllBooks(t *testing.T) {
+	db, mock := newMock()
+	defer db.Close()
+
+	repo := NewBookRepo(db)
+
+	updateBookMocks := []struct {
+		testName       string
+		expectedOutput int64
+		expectedError  error
+		mockFunc       func()
+		mockRepo       BookDBRepository
+	}{
+		{
+			testName: "Test Successful",
+			expectedOutput: 4,
+			expectedError: nil,
+			mockFunc: func() {
+				mock.ExpectExec(regexp.QuoteMeta(queryDeleteAllBooksAndAlter)).WillReturnResult(sqlmock.NewResult(0, 4))
+			},
+			mockRepo: repo,
+		},
+		{
+			testName: "Test Unsuccessful: Invalid rows affected",
+			expectedOutput: 0,
+			expectedError: errors.BookCouldNotQuery{Msg: "no RowsAffected available after DDL statement"},
+			mockFunc: func() {
+				mock.ExpectExec(regexp.QuoteMeta(queryDeleteAllBooksAndAlter)).WillReturnResult(sqlmock.NewErrorResult(goerrors.New("no RowsAffected available after DDL statement")))
+			},
+			mockRepo: repo,
+		},
+		{
+			testName: "Test Unsuccessful: Books not found",
+			expectedOutput: 0,
+			expectedError: errors.BookNotFound{},
+			mockFunc: func() {
+				mock.ExpectExec(regexp.QuoteMeta(queryDeleteAllBooksAndAlter)).WillReturnResult(sqlmock.NewResult(0, 0))
+			},
+			mockRepo: repo,
+		},
+		{
+			testName: "Test Unsuccessful: DB is closed",
+			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
+			mockFunc: func() {
+				db.Close()
+			},
+			mockRepo: repo,
+		},
+
+	}
+
+	for _, test := range updateBookMocks {
+		t.Run(test.testName, func(t *testing.T) {
+			if test.mockFunc != nil {
+				test.mockFunc()
+			}
+
+			res, err := test.mockRepo.DeleteAllBooks()
+			if (err != nil) && (err != test.expectedError) {
+				t.Errorf("Unexpected error:\nExpected: %v\nActual: %v", test.expectedError, err)
+				return
+			} else if (err == nil) && res != test.expectedOutput {
+				t.Errorf("Unexpected result:\nExpected: %v\nActual: %v", test.expectedOutput, res)
+			}
+		})
+	}
+}

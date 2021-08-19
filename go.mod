@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/gin-gonic/gin v1.7.4
 	github.com/gorilla/mux v1.8.0
 	github.com/lib/pq v1.10.2
 	github.com/spf13/cast v1.4.0 // indirect
