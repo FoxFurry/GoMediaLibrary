@@ -25,8 +25,8 @@ const (
 	querySearchByAuthorBook = `SELECT * FROM bookstore WHERE author=$1`
 	querySearchByTitleBook  = `SELECT * FROM bookstore WHERE title=$1`
 	queryUpdateBook         = `UPDATE bookstore SET title=$2, author=$3, year=$4, description=$5 WHERE id=$1`
-	queryDeleteBook = `DELETE FROM bookstore WHERE id=$1`
-	queryDeleteAllAndAlterBooks = `DELETE FROM bookstore; ALTER SEQUENCE bookstore_id_seq RESTART WITH 1`
+	queryDeleteBook             = `DELETE FROM bookstore WHERE id=$1`
+	queryDeleteAllBooksAndAlter = `DELETE FROM bookstore; ALTER SEQUENCE bookstore_id_seq RESTART WITH 1`
 )
 
 func (r *BookDBRepository) SaveBook(book *entity.Book) (*entity.Book, error) {
@@ -201,18 +201,18 @@ func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
 }
 
 func (r *BookDBRepository) DeleteAllBooks() (int64, error) {
-	res, err := r.database.Exec(queryDeleteAllAndAlterBooks)
+	res, err := r.database.Exec(queryDeleteAllBooksAndAlter)
 
 	if err != nil {
 		log.Printf("Unable to delete book or alter the sequence: %v", err)
-		return 0, err
+		return 0, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
 	rowsAffected, err := res.RowsAffected()
 
 	if err != nil {
 		log.Printf("Unable to get affected rows book: %v", err)
-		return 0, err
+		return 0, errors.BookCouldNotQuery{Msg: err.Error()}
 	}
 
 	if rowsAffected == 0 {

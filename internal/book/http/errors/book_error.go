@@ -3,7 +3,7 @@ package errors
 import (
 	"fmt"
 	"github.com/foxfurry/simple-rest/internal/common/server"
-	"net/http"
+	"github.com/gin-gonic/gin"
 )
 
 type BookNotFoundByTitle struct {
@@ -56,19 +56,19 @@ func (b BookCouldNotQuery) Error() string {
 	return fmt.Sprintf("Could not execute query: %v", b.Msg)
 }
 
-func HandleBookError(w http.ResponseWriter, err error) {
+func HandleBookError(c *gin.Context, err error) {
 	switch err.(type) {
 	case BookNotFound:
-		server.RespondNotFound(w, err.Error())
+		server.RespondNotFound(c, err.Error())
 	case BookNotFoundByAuthor:
-		server.RespondNotFound(w, err.Error())
+		server.RespondNotFound(c, err.Error())
 	case BookNotFoundByTitle:
-		server.RespondNotFound(w, err.Error())
+		server.RespondNotFound(c, err.Error())
 	case BookBadRequest:
-		server.RespondBadRequest(w, err.Error())
+		server.RespondBadRequest(c, err.Error())
 	case BookTitleAlreadyExists:
-		server.RespondAlreadyExists(w, err.Error())
+		server.RespondAlreadyExists(c, err.Error())
 	default:
-		server.RespondInternalError(w, fmt.Sprintf("Internal Error: %v", err))
+		server.RespondInternalError(c, fmt.Sprintf("Internal Error: %v", err))
 	}
 }

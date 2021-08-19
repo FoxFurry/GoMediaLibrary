@@ -2,13 +2,12 @@ package app
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/foxfurry/simple-rest/internal/book/http/routers"
 	dbpool "github.com/foxfurry/simple-rest/internal/common/database"
+	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
 )
 
@@ -16,7 +15,7 @@ import (
 // It embeds http server and provides router and database instances
 type app struct {
 	*http.Server
-	Router   *mux.Router
+	Router   *gin.Engine
 	Database *sql.DB
 }
 
@@ -29,7 +28,7 @@ func (a *app) Start() {
 // Configuration is loaded from viper environment
 func NewApp() *app {
 	newApp := &app{
-		Router: mux.NewRouter(),
+		Router: gin.New(),
 		Database: dbpool.CreateDBPool(
 			viper.GetString("Database.host"),
 			viper.GetInt("Database.port"),
@@ -42,36 +41,7 @@ func NewApp() *app {
 		),
 	}
 
-	newApp.Router.Use(func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			h.ServeHTTP(w, r)
-		})
-	})
-
 	routers.RegisterBookRoutes(newApp.Router, newApp.Database)
 
-	showRoutes(newApp.Router)
-
 	return newApp
-}
-
-func showRoutes(r *mux.Router) {
-	log.Println("Registered routes:")
-
-	walkFunc := func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-		path, errPath := route.GetPathTemplate()
-		method, errMethod := route.GetMethods()
-		if errPath != nil && errMethod != nil {
-			return fmt.Errorf("error reading path or methods: %v %v", errPath, errMethod)
-		} else {
-			log.Printf("%s %+v", path, method)
-		}
-		return nil
-	}
-
-	if err := r.Walk(walkFunc); err != nil {
-		log.Printf("Logging error: %v", err)
-	}
 }
