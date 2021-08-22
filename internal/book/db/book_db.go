@@ -30,11 +30,6 @@ const (
 )
 
 func (r *BookDBRepository) SaveBook(book *entity.Book) (*entity.Book, error) {
-	if !book.IsValid() {
-		log.Printf("Invalid request: %v", book)
-		return nil, errors.BookBadRequest{}
-	}
-
 	var bookID uint64
 
 	err := r.database.QueryRow(querySaveBook, book.Title, book.Author, book.Year, book.Description).Scan(&bookID)
@@ -162,14 +157,6 @@ func (r *BookDBRepository) SearchByTitle(title string) (*entity.Book, error) {
 }
 
 func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity.Book, error) {
-	if bookID < 1 {
-		log.Printf("Serial is less than 1")
-		return nil, errors.BookInvalidSerial{}
-	} else if !book.IsValid() {
-		log.Printf("Invalid request: %v", book)
-		return book, errors.BookBadRequest{}
-	}
-
 	_, err := r.database.Exec(queryUpdateBook, bookID, book.Title, book.Author, book.Year, book.Description)
 
 	returnBook := *book
@@ -183,10 +170,6 @@ func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity
 }
 
 func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
-	if bookID < 1 {
-		log.Printf("Serial is less than 1")
-		return 0, errors.BookInvalidSerial{}
-	}
 	res, err := r.database.Exec(queryDeleteBook, bookID)
 
 	if err != nil {

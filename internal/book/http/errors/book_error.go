@@ -16,7 +16,9 @@ type BookNotFoundByAuthor struct {
 
 type BooksNotFound struct{}
 
-type BookBadRequest struct{}
+type BookBadRequest struct{
+	Msg string
+}
 
 type BookBadScanOptions struct {
 	Msg string
@@ -47,7 +49,7 @@ func (b BooksNotFound) Error() string {
 }
 
 func (b BookBadRequest) Error() string {
-	return "Title, author and year are mandatory fields"
+	return fmt.Sprintf("Invalid request body: %v", b.Msg)
 }
 
 func (b BookTitleAlreadyExists) Error() string {

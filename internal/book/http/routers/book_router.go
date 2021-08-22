@@ -3,6 +3,7 @@ package routers
 import (
 	"database/sql"
 	"github.com/foxfurry/simple-rest/internal/book/http/controllers"
+	"github.com/foxfurry/simple-rest/internal/book/http/validators"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,4 +24,6 @@ func RegisterBookRoutes(router *gin.Engine, db *sql.DB) {
 		book.DELETE("/:id", bookRepo.DeleteBook)
 		book.DELETE("/", bookRepo.DeleteAllBooks)
 	}
+
+	validators.RegisterBookValidators()
 }

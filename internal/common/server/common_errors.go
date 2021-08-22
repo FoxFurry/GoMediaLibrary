@@ -10,12 +10,11 @@ type ErrorResponse struct {
 }
 
 func respondWithError(c *gin.Context, response ErrorResponse) {
-	c.String(response.errType, response.errMsg)
+	c.JSON(response.errType, gin.H{"error:":response.errMsg})
 }
 
 func RespondNotFound(c *gin.Context, error string) {
 	respondWithError(c, ErrorResponse{errMsg: error, errType: 404})
-
 }
 
 func RespondInternalError(c *gin.Context, error string) {
