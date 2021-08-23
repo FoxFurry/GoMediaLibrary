@@ -11,11 +11,18 @@ import (
 )
 
 const(
-	titleTag = "validtitle"
-	authorTag = "validauthor"
-	yearTag = "validyear"
+	idTag = "validID"
+	yearTag = "validYear"
 	requiredTag = "required"
 )
+
+var validID validator.Func = func(fl validator.FieldLevel) bool {
+	id := fl.Field().Int()
+	if id < 1 {
+		return false
+	}
+	return true
+}
 
 var validYear validator.Func = func(fl validator.FieldLevel) bool {
 	year := fl.Field().Int()
@@ -27,6 +34,10 @@ var validYear validator.Func = func(fl validator.FieldLevel) bool {
 
 var trslValidYear validator.RegisterTranslationsFunc = func(ut ut.Translator) error {
 	return ut.Add(yearTag, fmt.Sprintf("{0} should be between -868 and %v", time.Now().Year()), true)
+}
+
+var trslValidID validator.RegisterTranslationsFunc = func(ut ut.Translator) error {
+	return ut.Add(idTag, "{0} should be positive non-null number", true)
 }
 
 var requiredMessage validator.RegisterTranslationsFunc = func(ut ut.Translator) error {
@@ -47,8 +58,13 @@ func RegisterBookValidators(){
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation(yearTag, validYear)
-
 		v.RegisterTranslation(yearTag, errTranslator, trslValidYear, func(ut ut.Translator, fe validator.FieldError) string {
+			t, _ := ut.T(yearTag, fe.Field())
+			return t
+		})
+
+		v.RegisterValidation(idTag, validID)
+		v.RegisterTranslation(idTag, errTranslator, trslValidID,func(ut ut.Translator, fe validator.FieldError) string {
 			t, _ := ut.T(yearTag, fe.Field())
 			return t
 		})
@@ -57,8 +73,6 @@ func RegisterBookValidators(){
 			t, _ := ut.T(requiredTag, fe.Field())
 			return t
 		})
-
-
 	}else {
 		log.Panicf("Could not register validators: %v", ok)
 	}

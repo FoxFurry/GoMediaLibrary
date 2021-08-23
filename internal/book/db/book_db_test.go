@@ -58,17 +58,6 @@ func TestBookDBRepository_SaveBook(t *testing.T) {
 			mockRepo: repo,
 		},
 		{
-			testName: "Test Unsuccessful: Invalid Book Request",
-			input: entity.Book{
-				Author:      "test author",
-				Year:        1,
-				Description: "test description",
-			},
-			expectedOutput: entity.Book{},
-			expectedError:  errors.BookBadRequest{},
-			mockRepo:       repo,
-		},
-		{
 			testName: "Test Unsuccessful: Invalid Repository",
 			input: entity.Book{
 				Title:       "test title",
@@ -81,6 +70,14 @@ func TestBookDBRepository_SaveBook(t *testing.T) {
 			mockFunc: func() {
 				rows := mock.NewRows([]string{"id"})
 				mock.ExpectQuery(regexp.QuoteMeta(querySaveBook)).WithArgs("test title", "test author", 1, "test description").WillReturnRows(rows)
+			},
+			mockRepo: repo,
+		},
+		{ // DO NOT ADD ANY TC AFTER THIS ONE. IN THIS TC DB IS BEING CLOSED AND NOT REOPENED FOR REST OF TEST
+			testName:      "Test Unsuccessful: DB is closed",
+			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
+			mockFunc: func() {
+				db.Close()
 			},
 			mockRepo: repo,
 		},
@@ -145,11 +142,14 @@ func TestBookDBRepository_GetBook(t *testing.T) {
 			mockRepo: repo,
 			getID:    2,
 		},
-		{
-			testName:      "Test Unsuccessful: Invalid serial",
-			expectedError: errors.BookInvalidSerial{},
-			mockRepo:      repo,
-			getID:         0,
+		{ // DO NOT ADD ANY TC AFTER THIS ONE. IN THIS TC DB IS BEING CLOSED AND NOT REOPENED FOR REST OF TEST
+			testName:      "Test Unsuccessful: DB is closed",
+			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
+			mockFunc: func() {
+				db.Close()
+			},
+			mockRepo: repo,
+			getID:    1,
 		},
 	}
 
@@ -410,7 +410,7 @@ func TestBookDBRepository_SearchByAuthor(t *testing.T) {
 		},
 		{
 			testName:      "Test Unsuccessful: Invalid author",
-			expectedError: errors.BookBadRequest{},
+			expectedError: errors.BookBadBody{Msg: "Author cannot be empty"},
 			author:        "",
 		},
 		{
@@ -485,7 +485,7 @@ func TestBookDBRepository_SearchByTitle(t *testing.T) {
 		},
 		{
 			testName:      "Test Unsuccessful: Invalid title",
-			expectedError: errors.BookBadRequest{},
+			expectedError: errors.BookBadBody{Msg: "Title cannot be empty"},
 			title:         "",
 		},
 		{
@@ -494,6 +494,15 @@ func TestBookDBRepository_SearchByTitle(t *testing.T) {
 			mockFunc: func() {
 				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"})
 				mock.ExpectQuery(regexp.QuoteMeta(querySearchByTitleBook)).WithArgs("test title").WillReturnRows(rows)
+			},
+			mockRepo: repo,
+			title:    "test title",
+		},
+		{ // DO NOT ADD ANY TC AFTER THIS ONE. IN THIS TC DB IS BEING CLOSED AND NOT REOPENED FOR REST OF TEST
+			testName:      "Test Unsuccessful: DB is closed",
+			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
+			mockFunc: func() {
+				db.Close()
 			},
 			mockRepo: repo,
 			title:    "test title",
@@ -554,36 +563,14 @@ func TestBookDBRepository_UpdateBook(t *testing.T) {
 			mockRepo: repo,
 			id:       3,
 		},
-		{
-			testName:      "Test Unsuccessful: Invalid book id",
-			expectedError: errors.BookInvalidSerial{},
-			id:            0,
-		},
-		{
-			testName: "Test Unsuccessful: Invalid book",
-			input: entity.Book{
-				Title:       "",
-				Author:      "",
-				Year:        0,
-				Description: "",
-			},
-			expectedError: errors.BookBadRequest{},
-			id:            1,
-		},
-		{
-			testName: "Test Unsuccessful: DB is closed",
-			input: entity.Book{
-				Title:       "test title 2",
-				Author:      "test author 2",
-				Year:        2,
-				Description: "test description 2",
-			},
+		{ // DO NOT ADD ANY TC AFTER THIS ONE. IN THIS TC DB IS BEING CLOSED AND NOT REOPENED FOR REST OF TEST
+			testName:      "Test Unsuccessful: DB is closed",
 			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
 			mockFunc: func() {
 				db.Close()
 			},
 			mockRepo: repo,
-			id:       3,
+			id:       1,
 		},
 	}
 
@@ -629,11 +616,6 @@ func TestBookDBRepository_DeleteBook(t *testing.T) {
 			id:       1,
 		},
 		{
-			testName:      "Test Unsuccessful: Invalid book id",
-			expectedError: errors.BookInvalidSerial{},
-			id:            0,
-		},
-		{
 			testName:      "Test Unsuccessful: Book not found",
 			expectedError: errors.BooksNotFound{},
 			mockFunc: func() {
@@ -651,7 +633,7 @@ func TestBookDBRepository_DeleteBook(t *testing.T) {
 			mockRepo: repo,
 			id:       1,
 		},
-		{
+		{ // DO NOT ADD ANY TC AFTER THIS ONE. IN THIS TC DB IS BEING CLOSED AND NOT REOPENED FOR REST OF TEST
 			testName:      "Test Unsuccessful: DB is closed",
 			expectedError: errors.BookCouldNotQuery{Msg: "sql: database is closed"},
 			mockFunc: func() {

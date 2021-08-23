@@ -1,11 +1,11 @@
 package entity
 
 type Book struct {
-	ID          uint64 `json:"ID"`
-	Title       string `json:"Title" binding:"required"`
-	Author      string `json:"Author" binding:"required"`
-	Year        int    `json:"Year" binding:"validyear"`
-	Description string `json:"Description"`
+	ID          uint64 `json:"id,omitempty" binding:"omitempty,validID"`
+	Title       string `json:"title" binding:"required"`
+	Author      string `json:"author" binding:"required"`
+	Year        int    `json:"year" binding:"required,validYear"`
+	Description string `json:"description,omitempty"`
 }
 
 // Equal returns true if all fields in receiver are same as in parameter

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/foxfurry/simple-rest/internal/book/http/errors"
+	"github.com/foxfurry/simple-rest/internal/book/http/validators"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -25,6 +25,10 @@ const (
 	queryDeleteBook             = `DELETE FROM bookstore WHERE id=$1`
 	queryDeleteAllBooksAndAlter = `DELETE FROM bookstore; ALTER SEQUENCE bookstore_id_seq RESTART WITH 1`
 )
+
+func init(){
+	validators.RegisterBookValidators()
+}
 
 func newMock() (*sql.DB, sqlmock.Sqlmock) {
 	db, mock, err := sqlmock.New()
@@ -68,13 +72,13 @@ func TestBookService_SaveBook(t *testing.T) {
 			expectedBody:   "{\"id\":1,\"title\":\"Test 1\",\"author\":\"Test 1\",\"year\":1,\"description\":\"Test 1\"}",
 		},
 		{
-			testName:       "Test Unsuccessful: Invalid request body",
+			testName:       "Test Unsuccessful: Empty title",
 			service:        repo,
 			requestBody:    "{\"title\":\"\",\"author\":\"Test 1\",\"year\":1,\"description\":\"Test 1\"}",
 			url:            saveUrl,
 			method:         saveMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookBadRequest{}.Error(),
+			expectedBody:   "{\"error:\":\"Invalid request body: Title cannot be empty\"}",
 		},
 		{
 			testName:       "Test Unsuccessful: Empty request body",
@@ -82,7 +86,7 @@ func TestBookService_SaveBook(t *testing.T) {
 			url:            saveUrl,
 			method:         saveMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookBadRequest{}.Error(),
+			expectedBody:   "{\"error:\":\"Expected body, found EOF\"}",
 		},
 		{
 			testName:       "Test Unsuccessful: DB is closed",
@@ -94,7 +98,7 @@ func TestBookService_SaveBook(t *testing.T) {
 			url:            saveUrl,
 			method:         saveMethod,
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   errors.BookCouldNotQuery{Msg: "sql: database is closed"}.Error(),
+			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
 		},
 	}
 
@@ -167,7 +171,7 @@ func TestBookService_GetBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookInvalidSerial{}.Error(),
+			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
 		},
 		{
 			testName:       "Test Unsuccessful: Empty param",
@@ -175,7 +179,7 @@ func TestBookService_GetBook(t *testing.T) {
 			url:            getURL,
 			method:         getMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookInvalidSerial{}.Error(),
+			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
 		},
 		{
 			testName: "Test Unsuccessful: Book not found",
@@ -193,7 +197,7 @@ func TestBookService_GetBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusNotFound,
-			expectedBody:   errors.BooksNotFound{}.Error(),
+			expectedBody:   "{\"error:\":\"Book(s) not found in db\"}",
 		},
 		{
 			testName: "Test Unsuccessful: DB is closed",
@@ -210,7 +214,7 @@ func TestBookService_GetBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   errors.BookCouldNotQuery{Msg: "sql: database is closed"}.Error(),
+			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
 		},
 	}
 
@@ -277,7 +281,7 @@ func TestBookService_GetAllBooks(t *testing.T) {
 			url:            getAllURL,
 			method:         getAllMethod,
 			expectedStatus: http.StatusNotFound,
-			expectedBody:   errors.BooksNotFound{}.Error(),
+			expectedBody:   "{\"error:\":\"Book(s) not found in db\"}",
 		},
 		{
 			testName: "Test Unsuccessful: DB is closed",
@@ -288,7 +292,7 @@ func TestBookService_GetAllBooks(t *testing.T) {
 			url:            getAllURL,
 			method:         getAllMethod,
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   errors.BookCouldNotQuery{Msg: "sql: database is closed"}.Error(),
+			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
 		},
 	}
 
@@ -367,7 +371,7 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusNotFound,
-			expectedBody:   errors.BookNotFoundByAuthor{Author: "Test"}.Error(),
+			expectedBody:   "{\"error:\":\"Book(s) with author Test not found in db\"}",
 		},
 		{
 			testName:       "Test Unsuccessful: Invalid author",
@@ -375,7 +379,7 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 			url:            searchAuthorURL,
 			method:         searchAuthorMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookBadRequest{}.Error(),
+			expectedBody:   "{\"error:\":\"Invalid request body: Author cannot be empty\"}",
 		},
 		{
 			testName: "Test Unsuccessful: DB is closed",
@@ -392,7 +396,7 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   errors.BookCouldNotQuery{Msg: "sql: database is closed"}.Error(),
+			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
 		},
 	}
 
@@ -469,7 +473,7 @@ func TestBookService_SearchByTitle(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusNotFound,
-			expectedBody:   errors.BookNotFoundByTitle{Title: "Test 1"}.Error(),
+			expectedBody:   "{\"error:\":\"Book(s) with title Test 1 not found in db\"}",
 		},
 		{
 			testName: "Test Unsuccessful: Invalid title",
@@ -483,7 +487,7 @@ func TestBookService_SearchByTitle(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookBadRequest{}.Error(),
+			expectedBody:   "{\"error:\":\"Invalid request body: Title cannot be empty\"}",
 		},
 		{
 			testName: "Test Unsuccessful: DB is closed",
@@ -500,7 +504,7 @@ func TestBookService_SearchByTitle(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   errors.BookCouldNotQuery{Msg: "sql: database is closed"}.Error(),
+			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
 		},
 	}
 
@@ -574,7 +578,7 @@ func TestBookService_UpdateBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookInvalidSerial{}.Error(),
+			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
 		},
 		{
 			testName:       "Test Unsuccessful: Empty serial",
@@ -582,7 +586,7 @@ func TestBookService_UpdateBook(t *testing.T) {
 			url:            updateURL,
 			method:         updateMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookInvalidSerial{}.Error(),
+			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
 		},
 		{
 			testName:    "Test Unsuccessful: Invalid request body",
@@ -597,7 +601,7 @@ func TestBookService_UpdateBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookBadRequest{}.Error(),
+			expectedBody:   "{\"error:\":\"Invalid request body: Title cannot be empty\"}",
 		},
 		{
 			testName: "Test Unsuccessful: Empty request body",
@@ -611,7 +615,7 @@ func TestBookService_UpdateBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookBadRequest{}.Error(),
+			expectedBody:   "{\"error:\":\"Expected body, found EOF\"}",
 		},
 	}
 
@@ -670,7 +674,6 @@ func TestBookService_DeleteBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   "1",
 		},
 		{
 			testName: "Test Unsuccessful: Book(s) not found",
@@ -687,7 +690,7 @@ func TestBookService_DeleteBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusNotFound,
-			expectedBody:   errors.BooksNotFound{}.Error(),
+			expectedBody:   "{\"error:\":\"Book(s) not found in db\"}",
 		},
 		{
 			testName: "Test Unsuccessful: Invalid serial",
@@ -701,7 +704,7 @@ func TestBookService_DeleteBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookInvalidSerial{}.Error(),
+			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
 		},
 		{
 			testName:       "Test Unsuccessful: Empty serial",
@@ -709,7 +712,7 @@ func TestBookService_DeleteBook(t *testing.T) {
 			url:            deleteUrl,
 			method:         deleteMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   errors.BookInvalidSerial{}.Error(),
+			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
 		},
 	}
 
@@ -760,7 +763,7 @@ func TestBookService_DeleteAllBooks(t *testing.T) {
 			url:            deleteAllURL,
 			method:         deleteAllMethod,
 			expectedStatus: http.StatusOK,
-			expectedBody:   "4",
+			expectedBody:   "{\"Deleted rows\":4}",
 		},
 		{
 			testName: "Test Unsuccessful: Book(s) not found",
@@ -771,7 +774,7 @@ func TestBookService_DeleteAllBooks(t *testing.T) {
 			url:            deleteAllURL,
 			method:         deleteAllMethod,
 			expectedStatus: http.StatusNotFound,
-			expectedBody:   errors.BooksNotFound{}.Error(),
+			expectedBody:   "{\"error:\":\"Book(s) not found in db\"}",
 		},
 		{
 			testName: "Test Unsuccessful: DB is closed",
@@ -782,7 +785,7 @@ func TestBookService_DeleteAllBooks(t *testing.T) {
 			url:            deleteAllURL,
 			method:         deleteAllMethod,
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   errors.BookCouldNotQuery{Msg: "sql: database is closed"}.Error(),
+			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
 		},
 	}
 

@@ -100,7 +100,7 @@ func (r *BookDBRepository) GetAllBooks() ([]entity.Book, error) {
 func (r *BookDBRepository) SearchByAuthor(author string) ([]entity.Book, error) {
 	if author == "" {
 		log.Printf("Author field is empty")
-		return nil, errors.BookBadRequest{}
+		return nil, errors.BookBadBody{Msg: "Author cannot be empty"}
 	}
 
 	rows, err := r.database.Query(querySearchByAuthorBook, author)
@@ -139,7 +139,7 @@ func (r *BookDBRepository) SearchByTitle(title string) (*entity.Book, error) {
 
 	if title == "" {
 		log.Printf("Title field is empty")
-		return nil, errors.BookBadRequest{}
+		return nil, errors.BookBadBody{Msg: "Title cannot be empty"}
 	}
 
 	row := r.database.QueryRow(querySearchByTitleBook, title)
@@ -157,6 +157,10 @@ func (r *BookDBRepository) SearchByTitle(title string) (*entity.Book, error) {
 }
 
 func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity.Book, error) {
+	if bookID < 1 {
+		log.Printf("Serial is less than 1")
+		return nil, errors.BookInvalidSerial{}
+	}
 	_, err := r.database.Exec(queryUpdateBook, bookID, book.Title, book.Author, book.Year, book.Description)
 
 	returnBook := *book
@@ -170,6 +174,11 @@ func (r *BookDBRepository) UpdateBook(bookID uint64, book *entity.Book) (*entity
 }
 
 func (r *BookDBRepository) DeleteBook(bookID uint64) (int64, error) {
+	if bookID < 1 {
+		log.Printf("Serial is less than 1")
+		return 0, errors.BookInvalidSerial{}
+	}
+
 	res, err := r.database.Exec(queryDeleteBook, bookID)
 
 	if err != nil {

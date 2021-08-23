@@ -1,9 +1,15 @@
 package entity
 
 import (
+	"github.com/foxfurry/simple-rest/internal/book/http/validators"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
+
+func init(){
+	validators.RegisterBookValidators()
+}
 
 func TestBook_Equal(t *testing.T) {
 	testCasesEqual := []Book{
@@ -338,9 +344,9 @@ func TestBook_IsValid(t *testing.T) {
 	}
 
 	for _, tc := range testCasesValid {
-		assert.True(t, tc.IsValid(), "Book expected to be valid, but found invalid: %v", tc)
+		assert.True(t, binding.Validator.ValidateStruct(tc) == nil, "Book expected to be valid, but found invalid: %v", tc)
 	}
 	for _, tc := range testCasesInvalid {
-		assert.True(t, !tc.IsValid(), "Book expected to be invalid, but found valid: %v", tc)
+		assert.True(t, binding.Validator.ValidateStruct(tc) != nil, "Book expected to be invalid, but found valid: %v", tc)
 	}
 }

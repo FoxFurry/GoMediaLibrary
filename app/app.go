@@ -2,7 +2,7 @@ package app
 
 import (
 	"database/sql"
-	"github.com/foxfurry/simple-rest/internal/book/http/routers"
+	"github.com/foxfurry/simple-rest/internal/book/http/router"
 	dbpool "github.com/foxfurry/simple-rest/internal/common/database"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -41,7 +41,27 @@ func NewApp() *app {
 		),
 	}
 
-	routers.RegisterBookRoutes(newApp.Router, newApp.Database)
+	router.RegisterBookRoutes(newApp.Router, newApp.Database)
+
+	return newApp
+}
+
+func NewTestApp() *app {
+	newApp := &app{
+		Router: gin.New(),
+		Database: dbpool.CreateDBPool(
+			viper.GetString("database_test.host"),
+			viper.GetInt("database_test.port"),
+			viper.GetString("database_test.user"),
+			viper.GetString("database_test.password"),
+			viper.GetString("database_test.dbname"),
+			viper.GetInt("database_test.maxidleconnections"),
+			viper.GetInt("database_test.maxopenconnections"),
+			viper.GetDuration("database_test.maxconnidletime"),
+		),
+	}
+
+	router.RegisterBookRoutes(newApp.Router, newApp.Database)
 
 	return newApp
 }
