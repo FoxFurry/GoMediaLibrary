@@ -1,11 +1,11 @@
 package entity
 
 type Book struct {
-	ID          uint64 `json:"id"`
-	Title       string `json:"title"`
-	Author      string `json:"author"`
-	Year        int    `json:"year"`
-	Description string `json:"description"`
+	ID          uint64 `json:"id,omitempty" binding:"omitempty,numeric,validID"`
+	Title       string `json:"title" binding:"required"`
+	Author      string `json:"author" binding:"required"`
+	Year        int    `json:"year" binding:"required,validYear"`
+	Description string `json:"description,omitempty"`
 }
 
 // Equal returns true if all fields in receiver are same as in parameter
@@ -17,13 +17,6 @@ func (lhs Book) Equal(rhs Book) bool {
 func (lhs Book) EqualNoID(rhs Book) bool {
 	rhs.ID = lhs.ID
 	return rhs == lhs
-}
-
-func (obj Book) IsValid() bool {
-	if obj.Title == "" || obj.Author == "" || obj.Year == 0 {
-		return false
-	}
-	return true
 }
 
 // BookArrayEqualNoID compares two arrays of Book(s) using Book.EqualNoID on each element
