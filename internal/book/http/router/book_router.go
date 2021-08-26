@@ -13,8 +13,13 @@ func RegisterBookRoutes(router *gin.Engine, db *sql.DB) {
 	book := router.Group("/book")
 	{
 		book.GET("/:id", bookRepo.GetBook)
+
 		book.GET("/title/:title", bookRepo.SearchByTitle)
+		book.GET("/title/", bookRepo.SearchByTitle)
+
 		book.GET("/author/:author", bookRepo.SearchByAuthor)
+		book.GET("/author/", bookRepo.SearchByAuthor)
+
 		book.GET("/", bookRepo.GetAllBooks)
 
 		book.POST("/", bookRepo.SaveBook)

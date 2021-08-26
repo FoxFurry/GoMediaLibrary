@@ -1,94 +1,139 @@
 package errors
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/foxfurry/simple-rest/internal/common/server"
+	"github.com/foxfurry/simple-rest/internal/common/server/common_errors"
+	validator "github.com/foxfurry/simple-rest/internal/common/server/common_translators"
 	"github.com/gin-gonic/gin"
+	"log"
 )
 
-type BookNotFoundByTitle struct {
-	Title string
+type bookNotFoundByTitle struct {
+	common_errors.CommonError
 }
 
-type BookNotFoundByAuthor struct {
-	Author string
+type bookNotFoundByAuthor struct {
+	common_errors.CommonError
 }
 
-type BooksNotFound struct{}
-
-type BookBadBody struct{
-	Msg string
+type booksNotFound struct{
+	common_errors.CommonError
 }
 
-type BookBadScanOptions struct {
-	Msg string
+type bookBadBody struct{
+	common_errors.CommonError
 }
 
-type BookTitleAlreadyExists struct{}
-
-type BookCouldNotQuery struct {
-	Msg string
+type bookBadScanOptions struct {
+	common_errors.CommonError
 }
 
-type BookInvalidSerial struct{}
-
-type BookUnexpectedError struct {
-	Msg string
+type bookTitleAlreadyExists struct{
+	common_errors.CommonError
 }
 
-type BookEmptyBody struct{}
-
-func (b BookNotFoundByTitle) Error() string {
-	return fmt.Sprintf("Book(s) with title %v not found in db", b.Title)
+type bookCouldNotQuery struct {
+	common_errors.CommonError
 }
 
-func (b BookNotFoundByAuthor) Error() string {
-	return fmt.Sprintf("Book(s) with author %v not found in db", b.Author)
+type bookInvalidSerial struct{
+	common_errors.CommonError
 }
 
-func (b BooksNotFound) Error() string {
-	return "Book(s) not found in db"
+type bookUnexpectedError struct {
+	common_errors.CommonError
 }
 
-func (b BookBadBody) Error() string {
-	return fmt.Sprintf("Invalid request body: %v", b.Msg)
+type bookEmptyBody struct{
+	common_errors.CommonError
 }
 
-func (b BookTitleAlreadyExists) Error() string {
-	return "Requested title already exists"
+type bookValidatorError struct {
+	Fields []validator.FieldError	`json:"fields"`
 }
 
-func (b BookBadScanOptions) Error() string {
-	return fmt.Sprintf("Bad SQL scan options: %v", b.Msg)
+func NewBookNotFoundByTitle(title string) bookNotFoundByTitle {
+	return bookNotFoundByTitle{
+		common_errors.CommonError{Msg: fmt.Sprintf("Book(s) with title %v not found in db", title)},
+	}
 }
 
-func (b BookCouldNotQuery) Error() string {
-	return fmt.Sprintf("Could not execute query: %v", b.Msg)
+func NewBookNotFoundByAuthor(author string) bookNotFoundByAuthor {
+	return bookNotFoundByAuthor{
+		common_errors.CommonError{Msg: fmt.Sprintf("Book(s) with author %v not found in db", author)},
+	}
 }
 
-func (b BookInvalidSerial) Error() string {
-	return "Invalid serial. Serial must be more than 1"
+func NewBooksNotFound() booksNotFound {
+	return booksNotFound{
+		common_errors.CommonError{Msg: "Book(s) not found in db"},
+	}
 }
 
-func (b BookUnexpectedError) Error() string {
-	return fmt.Sprintf("Unexpected error: %v", b.Msg)
+func NewBookTitleAlreadyExists() bookTitleAlreadyExists {
+	return bookTitleAlreadyExists{
+		common_errors.CommonError{Msg: "Requested title already exists"},
+	}
 }
 
-func (b BookEmptyBody) Error() string {
-	return "Expected body, found EOF"
+func NewBookBadScanOptions(msg string) bookBadScanOptions {
+	return bookBadScanOptions{
+		common_errors.CommonError{Msg: fmt.Sprintf("Bad SQL scan options: %v", msg)},
+	}
+}
+
+func NewBookCouldNotQuery(msg string) bookCouldNotQuery {
+	return bookCouldNotQuery{
+		common_errors.CommonError{Msg: fmt.Sprintf("Could not execute query: %v", msg)},
+	}
+}
+
+func NewBookInvalidSerial() bookInvalidSerial {
+	return bookInvalidSerial{
+		common_errors.CommonError{Msg: "Invalid serial. Serial must be more than 1"},
+	}
+}
+
+func NewBookUnexpectedError(msg string) bookUnexpectedError {
+	return bookUnexpectedError{
+		common_errors.CommonError{Msg: fmt.Sprintf("Unexpected error: %v", msg)},
+	}
+}
+
+func NewBookEmptyBody() bookEmptyBody {
+	return bookEmptyBody{
+		common_errors.CommonError{Msg: "Expected body, found EOF"},
+	}
+}
+
+func NewBookValidatorError(fields []validator.FieldError) bookValidatorError {
+	return bookValidatorError{Fields: fields}
+}
+
+func (b bookValidatorError) Error() string {
+	var res = ""
+	for _, f := range b.Fields {
+		tmp, err := json.Marshal(f)
+		if err != nil {
+			log.Fatalf("Could not marshal field error: %v", err)
+		}
+		res += fmt.Sprintf("%s", tmp)
+	}
+	return res
 }
 
 func HandleBookError(c *gin.Context, err error) {
 	switch err.(type) {
-	case BooksNotFound, BookNotFoundByAuthor, BookNotFoundByTitle:
-		server.RespondNotFound(c, err.Error())
-	case BookBadBody, BookInvalidSerial, BookEmptyBody:
-		server.RespondBadRequest(c, err.Error())
-	case BookTitleAlreadyExists:
-		server.RespondAlreadyExists(c, err.Error())
-	case BookUnexpectedError, BookCouldNotQuery:
-		server.RespondInternalError(c, err.Error())
+	case booksNotFound, bookNotFoundByAuthor, bookNotFoundByTitle:
+		common_errors.RespondNotFound(c, err)
+	case bookValidatorError, bookInvalidSerial, bookEmptyBody:
+		common_errors.RespondBadRequest(c, err)
+	case bookTitleAlreadyExists:
+		common_errors.RespondAlreadyExists(c, err)
+	case bookUnexpectedError, bookCouldNotQuery:
+		common_errors.RespondInternalError(c, err)
 	default:
-		server.RespondInternalError(c, fmt.Sprintf("Internal Error: %v", err))
+		common_errors.RespondInternalError(c, err)
 	}
 }

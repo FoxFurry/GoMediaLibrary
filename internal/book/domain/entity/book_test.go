@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func init(){
+func init() {
 	validators.RegisterBookValidators()
 }
 

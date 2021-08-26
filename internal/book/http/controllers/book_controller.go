@@ -5,9 +5,11 @@ import (
 	bookDB "github.com/foxfurry/simple-rest/internal/book/db"
 	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
 	"github.com/foxfurry/simple-rest/internal/book/http/errors"
-	"github.com/foxfurry/simple-rest/internal/book/http/validators"
+	"github.com/foxfurry/simple-rest/internal/common/server/common_response"
+	"github.com/foxfurry/simple-rest/internal/common/server/common_translators"
 	"github.com/gin-gonic/gin"
 	"io"
+	"net/http"
 	"strconv"
 )
 
@@ -26,10 +28,10 @@ func (b *BookService) SaveBook(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&book); err != nil {
 		if err == io.EOF {
-			errors.HandleBookError(c, errors.BookEmptyBody{})
+			errors.HandleBookError(c, errors.NewBookEmptyBody())
 			return
-		}else {
-			errors.HandleBookError(c, errors.BookBadBody{Msg: validators.Translate(err)})
+		} else {
+			errors.HandleBookError(c, errors.NewBookValidatorError(common_translators.Translate(err)))
 			return
 		}
 	}
@@ -40,7 +42,7 @@ func (b *BookService) SaveBook(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, saveBook)
+	common_response.Respond(c, http.StatusOK, saveBook, nil)
 }
 
 func (b *BookService) GetBook(c *gin.Context) {
@@ -48,7 +50,7 @@ func (b *BookService) GetBook(c *gin.Context) {
 	id, err := strconv.Atoi(idParam)
 
 	if err != nil {
-		errors.HandleBookError(c, errors.BookInvalidSerial{})
+		errors.HandleBookError(c, errors.NewBookInvalidSerial())
 		return
 	}
 
@@ -58,7 +60,7 @@ func (b *BookService) GetBook(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, getBook)
+	common_response.Respond(c, http.StatusOK, getBook, nil)
 }
 
 func (b *BookService) GetAllBooks(c *gin.Context) {
@@ -68,19 +70,19 @@ func (b *BookService) GetAllBooks(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, allBooks)
+	common_response.Respond(c, http.StatusOK, allBooks, nil)
 }
 
 func (b *BookService) SearchByAuthor(c *gin.Context) {
 	author := c.Param("author")
 
-	bookByAuthor, err := b.dbRepo.SearchByAuthor(author)
+	booksByAuthor, err := b.dbRepo.SearchByAuthor(author)
 	if err != nil {
 		errors.HandleBookError(c, err)
 		return
 	}
 
-	c.JSON(200, bookByAuthor)
+	common_response.Respond(c, http.StatusOK, booksByAuthor, nil)
 }
 
 func (b *BookService) SearchByTitle(c *gin.Context) {
@@ -92,7 +94,7 @@ func (b *BookService) SearchByTitle(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, bookByTitle)
+	common_response.Respond(c, http.StatusOK, bookByTitle, nil)
 }
 
 func (b *BookService) UpdateBook(c *gin.Context) {
@@ -100,7 +102,7 @@ func (b *BookService) UpdateBook(c *gin.Context) {
 	id, err := strconv.Atoi(idParam)
 
 	if err != nil {
-		errors.HandleBookError(c, errors.BookInvalidSerial{})
+		errors.HandleBookError(c, errors.NewBookInvalidSerial())
 		return
 	}
 
@@ -108,21 +110,21 @@ func (b *BookService) UpdateBook(c *gin.Context) {
 
 	if err = c.ShouldBindJSON(&book); err != nil {
 		if err == io.EOF {
-			errors.HandleBookError(c, errors.BookEmptyBody{})
+			errors.HandleBookError(c, errors.NewBookEmptyBody())
 			return
-		}else {
-			errors.HandleBookError(c, errors.BookBadBody{Msg: validators.Translate(err)})
+		} else {
+			errors.HandleBookError(c, errors.NewBookValidatorError(common_translators.Translate(err)))
 			return
 		}
 	}
 
-	updatedRows, err := b.dbRepo.UpdateBook(uint64(id), &book)
+	updatedBook, err := b.dbRepo.UpdateBook(uint64(id), &book)
 	if err != nil {
 		errors.HandleBookError(c, err)
 		return
 	}
 
-	c.JSON(200, updatedRows)
+	common_response.Respond(c, http.StatusOK, updatedBook, nil)
 }
 
 func (b *BookService) DeleteBook(c *gin.Context) {
@@ -130,7 +132,7 @@ func (b *BookService) DeleteBook(c *gin.Context) {
 	id, err := strconv.Atoi(idParam)
 
 	if err != nil {
-		errors.HandleBookError(c, errors.BookInvalidSerial{})
+		errors.HandleBookError(c, errors.NewBookInvalidSerial())
 		return
 	}
 
@@ -140,7 +142,7 @@ func (b *BookService) DeleteBook(c *gin.Context) {
 		return
 	}
 
-	c.Status(200)
+	common_response.Respond(c, http.StatusOK, nil, nil)
 }
 
 func (b *BookService) DeleteAllBooks(c *gin.Context) {
@@ -150,5 +152,5 @@ func (b *BookService) DeleteAllBooks(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, gin.H{"Deleted rows": deletedRows})
+	common_response.Respond(c, http.StatusOK, deletedRows, nil)
 }

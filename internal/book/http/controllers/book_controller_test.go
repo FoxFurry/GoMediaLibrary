@@ -1,32 +1,50 @@
 package controllers
 
 import (
+	"bytes"
 	"database/sql"
-	"fmt"
+	"encoding/json"
 	"github.com/DATA-DOG/go-sqlmock"
+	bookdb "github.com/foxfurry/simple-rest/internal/book/db"
+	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
+	"github.com/foxfurry/simple-rest/internal/book/http/errors"
 	"github.com/foxfurry/simple-rest/internal/book/http/validators"
+	"github.com/foxfurry/simple-rest/internal/common/server/common_translators"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
-	"strings"
 	"testing"
 )
 
-const (
-	querySaveBook               = `INSERT INTO bookstore (title, author, year, description) VALUES ($1, $2, $3, $4) RETURNING id`
-	queryGetBook                = `SELECT * FROM bookstore WHERE id=$1`
-	queryGetAll                 = `SELECT * FROM bookstore`
-	querySearchByAuthorBook     = `SELECT * FROM bookstore WHERE author=$1`
-	querySearchByTitleBook      = `SELECT * FROM bookstore WHERE title=$1`
-	queryUpdateBook             = `UPDATE bookstore SET title=$2, author=$3, year=$4, description=$5 WHERE id=$1`
-	queryDeleteBook             = `DELETE FROM bookstore WHERE id=$1`
-	queryDeleteAllBooksAndAlter = `DELETE FROM bookstore; ALTER SEQUENCE bookstore_id_seq RESTART WITH 1`
-)
+type expectedErrors struct {
+	Msg    string                          `json:"msg,omitempty"`
+	Fields []common_translators.FieldError `json:"fields,omitempty"`
+}
 
-func init(){
+type singleResponse struct {
+	Data  *entity.Book   `json:"data"`
+	Error expectedErrors `json:"error"`
+}
+
+type rowsResponse struct {
+	Data  int   `json:"data"`
+	Error expectedErrors `json:"error"`
+}
+
+type arrayResponse struct {
+	Data  []entity.Book  `json:"data"`
+	Error expectedErrors `json:"error"`
+}
+
+func (e expectedErrors) isEmpty() bool {
+	return e.Msg == "" && e.Fields == nil
+}
+
+func init() {
 	validators.RegisterBookValidators()
 }
 
@@ -52,33 +70,59 @@ func TestBookService_SaveBook(t *testing.T) {
 		testName       string
 		mockFunc       func()
 		service        BookService
-		requestBody    string
+		requestBody    *entity.Book
 		method         string
 		url            string
 		expectedStatus int
-		expectedBody   string
+		expectedBody   *entity.Book
+		expectedError  expectedErrors
+		expectedHeader map[string]string
 	}{
 		{
 			testName: "Test Successful",
 			mockFunc: func() {
 				rows := sqlmock.NewRows([]string{"id"}).AddRow(1)
-				mock.ExpectQuery(regexp.QuoteMeta(querySaveBook)).WithArgs("Test 1", "Test 1", 1, "Test 1").WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(bookdb.QuerySaveBook)).WithArgs("Test 1", "Test 1", 1, "Test 1").WillReturnRows(rows)
 			},
-			service:        repo,
-			requestBody:    "{\"title\":\"Test 1\",\"author\":\"Test 1\",\"year\":1,\"description\":\"Test 1\"}",
+			service: repo,
+			requestBody: &entity.Book{
+				Title:       "Test 1",
+				Author:      "Test 1",
+				Year:        1,
+				Description: "Test 1",
+			},
 			url:            "/book",
 			method:         "POST",
 			expectedStatus: http.StatusOK,
-			expectedBody:   "{\"id\":1,\"title\":\"Test 1\",\"author\":\"Test 1\",\"year\":1,\"description\":\"Test 1\"}",
+			expectedBody: &entity.Book{
+				Title:       "Test 1",
+				Author:      "Test 1",
+				Year:        1,
+				Description: "Test 1",
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
-			testName:       "Test Unsuccessful: Empty title",
-			service:        repo,
-			requestBody:    "{\"title\":\"\",\"author\":\"Test 1\",\"year\":1,\"description\":\"Test 1\"}",
+			testName: "Test Unsuccessful: Empty title",
+			service:  repo,
+			requestBody: &entity.Book{
+				Author:      "Ray Bradbury",
+				Year:        1953,
+				Description: "Fahrenheit 451 is a 1953 dystopian novel by American writer Ray Bradbury. Often regarded as one of his best works",
+			},
 			url:            saveUrl,
 			method:         saveMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Invalid request body: Title cannot be empty\"}",
+			expectedError: expectedErrors{
+				Fields: []common_translators.FieldError{
+					validators.FieldTitleEmpty,
+				},
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName:       "Test Unsuccessful: Empty request body",
@@ -86,26 +130,48 @@ func TestBookService_SaveBook(t *testing.T) {
 			url:            saveUrl,
 			method:         saveMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Expected body, found EOF\"}",
+			expectedError: expectedErrors{
+				Msg: errors.NewBookEmptyBody().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
-			testName:       "Test Unsuccessful: DB is closed",
+			testName: "Test Unsuccessful: DB is closed",
 			mockFunc: func() {
 				db.Close()
 			},
-			service:        repo,
-			requestBody:    "{\"title\":\"Test 1\",\"author\":\"Test 1\",\"year\":1,\"description\":\"Test 1\"}",
+			service: repo,
+			requestBody: &entity.Book{
+				Title:       "Fahrenheit 451",
+				Author:      "Ray Bradbury",
+				Year:        1953,
+				Description: "Fahrenheit 451 is a 1953 dystopian novel by American writer Ray Bradbury. Often regarded as one of his best works",
+			},
 			url:            saveUrl,
 			method:         saveMethod,
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
+			expectedError: expectedErrors{
+				Msg: errors.NewBookCouldNotQuery("sql: database is closed").Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 	}
 
 	for _, tc := range saveBookServiceMocks {
 		t.Run(tc.testName, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(tc.method, tc.url, strings.NewReader(tc.requestBody))
+
+			var jsonRequest []byte = nil
+
+			if tc.requestBody != nil {
+				jsonRequest, _ = json.Marshal(tc.requestBody)
+			}
+
+			req, _ := http.NewRequest(tc.method, tc.url, bytes.NewReader(jsonRequest))
 
 			c, _ := gin.CreateTestContext(w)
 			c.Request = req
@@ -117,7 +183,32 @@ func TestBookService_SaveBook(t *testing.T) {
 			tc.service.SaveBook(c)
 
 			assert.Equal(t, tc.expectedStatus, w.Code)
-			assert.Equal(t, tc.expectedBody, w.Body.String())
+
+			body, err := ioutil.ReadAll(w.Body)
+			if err != nil {
+				t.Errorf("Could not read the body: %v", err)
+			}
+			resultBody := singleResponse{}
+
+			if err = json.Unmarshal(body, &resultBody); err != nil {
+				t.Errorf("Unable to unmarshal the body")
+			}
+
+			if tc.expectedBody != nil {
+				assert.True(t, tc.expectedBody.EqualNoID(*resultBody.Data), "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedBody, resultBody.Data)
+			} else if resultBody.Data != nil {
+				t.Errorf("Expected result body to be nil, found %+v", resultBody.Data)
+			}
+			if !tc.expectedError.isEmpty() {
+				assert.Equal(t, tc.expectedError, resultBody.Error, "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedError, resultBody.Error)
+			} else if !resultBody.Error.isEmpty() {
+				t.Errorf("Expected error to be nil, found %+v", resultBody.Error)
+			}
+
+			for header, expected := range tc.expectedHeader {
+				actual := w.Header().Get(header)
+				assert.Equal(t, expected, actual)
+			}
 		})
 	}
 }
@@ -139,13 +230,15 @@ func TestBookService_GetBook(t *testing.T) {
 		url            string
 		params         []gin.Param
 		expectedStatus int
-		expectedBody   string
+		expectedBody   *entity.Book
+		expectedError  expectedErrors
+		expectedHeader map[string]string
 	}{
 		{
 			testName: "Test Successful",
 			mockFunc: func() {
 				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"}).AddRow(1, "Test 1", "Test 1", 1, "Test 1")
-				mock.ExpectQuery(regexp.QuoteMeta(queryGetBook)).WithArgs(1).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(bookdb.QueryGetBook)).WithArgs(1).WillReturnRows(rows)
 			},
 			service: repo,
 			url:     getURL,
@@ -157,7 +250,15 @@ func TestBookService_GetBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   "{\"id\":1,\"title\":\"Test 1\",\"author\":\"Test 1\",\"year\":1,\"description\":\"Test 1\"}",
+			expectedBody: &entity.Book{
+				Title:       "Test 1",
+				Author:      "Test 1",
+				Year:        1,
+				Description: "Test 1",
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: Invalid param value",
@@ -171,7 +272,12 @@ func TestBookService_GetBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
+			expectedError: expectedErrors{
+				Msg: errors.NewBookInvalidSerial().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName:       "Test Unsuccessful: Empty param",
@@ -179,13 +285,18 @@ func TestBookService_GetBook(t *testing.T) {
 			url:            getURL,
 			method:         getMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
+			expectedError: expectedErrors{
+				Msg: errors.NewBookInvalidSerial().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: Book not found",
 			mockFunc: func() {
 				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"})
-				mock.ExpectQuery(regexp.QuoteMeta(queryGetBook)).WithArgs(666).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(bookdb.QueryGetBook)).WithArgs(666).WillReturnRows(rows)
 			},
 			service: repo,
 			url:     getURL,
@@ -197,7 +308,12 @@ func TestBookService_GetBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusNotFound,
-			expectedBody:   "{\"error:\":\"Book(s) not found in db\"}",
+			expectedError: expectedErrors{
+				Msg: errors.NewBooksNotFound().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: DB is closed",
@@ -214,7 +330,12 @@ func TestBookService_GetBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
+			expectedError: expectedErrors{
+				Msg: errors.NewBookCouldNotQuery("sql: database is closed").Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 	}
 
@@ -233,7 +354,32 @@ func TestBookService_GetBook(t *testing.T) {
 			tc.service.GetBook(c)
 
 			assert.Equal(t, tc.expectedStatus, w.Code)
-			assert.Equal(t, tc.expectedBody, w.Body.String())
+
+			body, err := ioutil.ReadAll(w.Body)
+			if err != nil {
+				t.Errorf("Could not read the body: %v", err)
+			}
+			resultBody := singleResponse{}
+
+			if err = json.Unmarshal(body, &resultBody); err != nil {
+				t.Errorf("Unable to unmarshal the body")
+			}
+
+			if tc.expectedBody != nil {
+				assert.True(t, tc.expectedBody.EqualNoID(*resultBody.Data), "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedBody, resultBody.Data)
+			} else if resultBody.Data != nil {
+				t.Errorf("Expected result body to be nil, found %+v", resultBody.Data)
+			}
+			if !tc.expectedError.isEmpty() {
+				assert.Equal(t, tc.expectedError, resultBody.Error, "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedError, resultBody.Error)
+			} else if !resultBody.Error.isEmpty() {
+				t.Errorf("Expected error to be nil, found %+v", resultBody.Error)
+			}
+
+			for header, expected := range tc.expectedHeader {
+				actual := w.Header().Get(header)
+				assert.Equal(t, expected, actual)
+			}
 		})
 	}
 }
@@ -248,13 +394,15 @@ func TestBookService_GetAllBooks(t *testing.T) {
 	getAllURL := "/book"
 
 	getAllBooksServiceMocks := []struct {
-		testName       string
-		mockFunc       func()
-		service        BookService
-		method         string
-		url            string
-		expectedStatus int
-		expectedBody   string
+		testName          string
+		mockFunc          func()
+		service           BookService
+		method            string
+		url               string
+		expectedStatus    int
+		expectedBodyArray []entity.Book
+		expectedError     expectedErrors
+		expectedHeader    map[string]string
 	}{
 		{
 			testName: "Test Successful",
@@ -263,25 +411,53 @@ func TestBookService_GetAllBooks(t *testing.T) {
 					AddRow(1, "Test 1", "Test 1", 1, "Test 1").
 					AddRow(2, "Test 2", "Test 2", 2, "Test 2").
 					AddRow(3, "Test 3", "Test 3", 3, "Test 3")
-				mock.ExpectQuery(regexp.QuoteMeta(queryGetAll)).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(bookdb.QueryGetAll)).WillReturnRows(rows)
 			},
 			service:        repo,
 			url:            getAllURL,
 			method:         getAllMethod,
 			expectedStatus: http.StatusOK,
-			expectedBody:   "[{\"id\":1,\"title\":\"Test 1\",\"author\":\"Test 1\",\"year\":1,\"description\":\"Test 1\"},{\"id\":2,\"title\":\"Test 2\",\"author\":\"Test 2\",\"year\":2,\"description\":\"Test 2\"},{\"id\":3,\"title\":\"Test 3\",\"author\":\"Test 3\",\"year\":3,\"description\":\"Test 3\"}]",
+			expectedBodyArray: []entity.Book{
+				{
+					Title:       "Test 1",
+					Author:      "Test 1",
+					Year:        1,
+					Description: "Test 1",
+				},
+				{
+					Title:       "Test 2",
+					Author:      "Test 2",
+					Year:        2,
+					Description: "Test 2",
+				},
+				{
+					Title:       "Test 3",
+					Author:      "Test 3",
+					Year:        3,
+					Description: "Test 3",
+				},
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: Book(s) not found",
 			mockFunc: func() {
 				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"})
-				mock.ExpectQuery(regexp.QuoteMeta(queryGetAll)).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(bookdb.QueryGetAll)).WillReturnRows(rows)
 			},
-			service:        repo,
-			url:            getAllURL,
-			method:         getAllMethod,
-			expectedStatus: http.StatusNotFound,
-			expectedBody:   "{\"error:\":\"Book(s) not found in db\"}",
+			service:           repo,
+			url:               getAllURL,
+			method:            getAllMethod,
+			expectedStatus:    http.StatusNotFound,
+			expectedBodyArray: []entity.Book{},
+			expectedError: expectedErrors{
+				Msg: errors.NewBooksNotFound().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: DB is closed",
@@ -292,7 +468,12 @@ func TestBookService_GetAllBooks(t *testing.T) {
 			url:            getAllURL,
 			method:         getAllMethod,
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
+			expectedError: expectedErrors{
+				Msg: errors.NewBookCouldNotQuery("sql: database is closed").Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 	}
 
@@ -309,8 +490,33 @@ func TestBookService_GetAllBooks(t *testing.T) {
 
 			tc.service.GetAllBooks(c)
 
+			body, err := ioutil.ReadAll(w.Body)
+			if err != nil {
+				t.Errorf("Could not read the body: %v", err)
+			}
+			resultBody := &arrayResponse{}
+
+			if err = json.Unmarshal(body, &resultBody); err != nil {
+				t.Errorf("Unable to unmarshal the body")
+			}
+
 			assert.Equal(t, tc.expectedStatus, w.Code)
-			assert.Equal(t, tc.expectedBody, w.Body.String())
+
+			for header, expected := range tc.expectedHeader {
+				actual := w.Header().Get(header)
+				assert.Equal(t, expected, actual)
+			}
+
+			if tc.expectedBodyArray != nil {
+				assert.True(t, entity.BookArrayEqualNoID(tc.expectedBodyArray, resultBody.Data), "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedBodyArray, resultBody.Data)
+			} else if resultBody.Data != nil {
+				t.Errorf("Expected result body to be nil, found %+v", resultBody.Data)
+			}
+			if !tc.expectedError.isEmpty() {
+				assert.Equal(t, tc.expectedError, resultBody.Error, "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedError, resultBody.Error)
+			} else if !resultBody.Error.isEmpty() {
+				t.Errorf("Expected error to be nil, found %+v", resultBody.Error)
+			}
 		})
 	}
 }
@@ -325,14 +531,16 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 	searchAuthorURL := "/book/author"
 
 	searchByAuthorServiceMocks := []struct {
-		testName       string
-		mockFunc       func()
-		service        BookService
-		method         string
-		params         []gin.Param
-		url            string
-		expectedStatus int
-		expectedBody   string
+		testName          string
+		mockFunc          func()
+		service           BookService
+		method            string
+		params            []gin.Param
+		url               string
+		expectedStatus    int
+		expectedBodyArray []entity.Book
+		expectedError     expectedErrors
+		expectedHeader    map[string]string
 	}{
 		{
 			testName: "Test Successful",
@@ -341,7 +549,7 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 					AddRow(1, "Test 1", "Test", 1, "Test 1").
 					AddRow(2, "Test 2", "Test", 2, "Test 2").
 					AddRow(3, "Test 3", "Test", 3, "Test 3")
-				mock.ExpectQuery(regexp.QuoteMeta(querySearchByAuthorBook)).WithArgs("Test").WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(bookdb.QuerySearchByAuthorBook)).WithArgs("Test").WillReturnRows(rows)
 			},
 			service: repo,
 			url:     searchAuthorURL,
@@ -353,13 +561,35 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   "[{\"id\":1,\"title\":\"Test 1\",\"author\":\"Test\",\"year\":1,\"description\":\"Test 1\"},{\"id\":2,\"title\":\"Test 2\",\"author\":\"Test\",\"year\":2,\"description\":\"Test 2\"},{\"id\":3,\"title\":\"Test 3\",\"author\":\"Test\",\"year\":3,\"description\":\"Test 3\"}]",
+			expectedBodyArray: []entity.Book{
+				{
+					Title:       "Test 1",
+					Author:      "Test",
+					Year:        1,
+					Description: "Test 1",
+				},
+				{
+					Title:       "Test 2",
+					Author:      "Test",
+					Year:        2,
+					Description: "Test 2",
+				},
+				{
+					Title:       "Test 3",
+					Author:      "Test",
+					Year:        3,
+					Description: "Test 3",
+				},
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: Book(s) not found",
 			mockFunc: func() {
 				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"})
-				mock.ExpectQuery(regexp.QuoteMeta(querySearchByAuthorBook)).WithArgs("Test").WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(bookdb.QuerySearchByAuthorBook)).WithArgs("Test").WillReturnRows(rows)
 			},
 			service: repo,
 			url:     searchAuthorURL,
@@ -371,7 +601,12 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusNotFound,
-			expectedBody:   "{\"error:\":\"Book(s) with author Test not found in db\"}",
+			expectedError: expectedErrors{
+				Msg: errors.NewBookNotFoundByAuthor("Test").Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName:       "Test Unsuccessful: Invalid author",
@@ -379,7 +614,14 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 			url:            searchAuthorURL,
 			method:         searchAuthorMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Invalid request body: Author cannot be empty\"}",
+			expectedError: expectedErrors{
+				Fields: []common_translators.FieldError{
+					validators.FieldAuthorEmpty,
+				},
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: DB is closed",
@@ -396,7 +638,12 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
+			expectedError: expectedErrors{
+				Msg: errors.NewBookCouldNotQuery("sql: database is closed").Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 	}
 
@@ -413,8 +660,33 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 
 			tc.service.SearchByAuthor(c)
 
+			body, err := ioutil.ReadAll(w.Body)
+			if err != nil {
+				t.Errorf("Could not read the body: %v", err)
+			}
+			resultBody := &arrayResponse{}
+
+			if err = json.Unmarshal(body, &resultBody); err != nil {
+				t.Errorf("Unable to unmarshal the body")
+			}
+
 			assert.Equal(t, tc.expectedStatus, w.Code)
-			assert.Equal(t, tc.expectedBody, w.Body.String())
+
+			for header, expected := range tc.expectedHeader {
+				actual := w.Header().Get(header)
+				assert.Equal(t, expected, actual)
+			}
+
+			if tc.expectedBodyArray != nil {
+				assert.True(t, entity.BookArrayEqualNoID(tc.expectedBodyArray, resultBody.Data), "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedBodyArray, resultBody.Data)
+			} else if resultBody.Data != nil {
+				t.Errorf("Expected result body to be nil, found %+v", resultBody.Data)
+			}
+			if !tc.expectedError.isEmpty() {
+				assert.Equal(t, tc.expectedError, resultBody.Error, "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedError, resultBody.Error)
+			} else if !resultBody.Error.isEmpty() {
+				t.Errorf("Expected error to be nil, found %+v", resultBody.Error)
+			}
 		})
 	}
 }
@@ -436,14 +708,16 @@ func TestBookService_SearchByTitle(t *testing.T) {
 		params         []gin.Param
 		url            string
 		expectedStatus int
-		expectedBody   string
+		expectedBody   *entity.Book
+		expectedError  expectedErrors
+		expectedHeader map[string]string
 	}{
 		{
 			testName: "Test Successful",
 			mockFunc: func() {
 				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"}).
 					AddRow(1, "Test 1", "Test 1", 1, "Test 1")
-				mock.ExpectQuery(regexp.QuoteMeta(querySearchByTitleBook)).WithArgs("Test 1").WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(bookdb.QuerySearchByTitleBook)).WithArgs("Test 1").WillReturnRows(rows)
 			},
 			service: repo,
 			url:     searchTitleURL,
@@ -455,13 +729,21 @@ func TestBookService_SearchByTitle(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   "{\"id\":1,\"title\":\"Test 1\",\"author\":\"Test 1\",\"year\":1,\"description\":\"Test 1\"}",
+			expectedBody:   &entity.Book{
+				Title:       "Test 1",
+				Author:      "Test 1",
+				Year:        1,
+				Description: "Test 1",
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: Book not found",
 			mockFunc: func() {
 				rows := sqlmock.NewRows([]string{"id", "title", "author", "year", "description"})
-				mock.ExpectQuery(regexp.QuoteMeta(querySearchByTitleBook)).WithArgs("Test 1").WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(bookdb.QuerySearchByTitleBook)).WithArgs("Test 1").WillReturnRows(rows)
 			},
 			service: repo,
 			url:     searchTitleURL,
@@ -473,7 +755,12 @@ func TestBookService_SearchByTitle(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusNotFound,
-			expectedBody:   "{\"error:\":\"Book(s) with title Test 1 not found in db\"}",
+			expectedError: expectedErrors{
+				Msg:    errors.NewBookNotFoundByTitle("Test 1").Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: Invalid title",
@@ -487,7 +774,14 @@ func TestBookService_SearchByTitle(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Invalid request body: Title cannot be empty\"}",
+			expectedError: expectedErrors{
+				Fields: []common_translators.FieldError{
+					validators.FieldTitleEmpty,
+				},
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: DB is closed",
@@ -504,7 +798,12 @@ func TestBookService_SearchByTitle(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
+			expectedError: expectedErrors{
+				Msg:    errors.NewBookCouldNotQuery("sql: database is closed").Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 	}
 
@@ -521,8 +820,31 @@ func TestBookService_SearchByTitle(t *testing.T) {
 
 			tc.service.SearchByTitle(c)
 
-			assert.Equal(t, tc.expectedStatus, w.Code)
-			assert.Equal(t, tc.expectedBody, w.Body.String())
+			body, err := ioutil.ReadAll(w.Body)
+			if err != nil {
+				t.Errorf("Could not read the body: %v", err)
+			}
+			resultBody := singleResponse{}
+
+			if err = json.Unmarshal(body, &resultBody); err != nil {
+				t.Errorf("Unable to unmarshal the body")
+			}
+
+			if tc.expectedBody != nil {
+				assert.True(t, tc.expectedBody.EqualNoID(*resultBody.Data), "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedBody, resultBody.Data)
+			} else if resultBody.Data != nil {
+				t.Errorf("Expected result body to be nil, found %+v", resultBody.Data)
+			}
+			if !tc.expectedError.isEmpty() {
+				assert.Equal(t, tc.expectedError, resultBody.Error, "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedError, resultBody.Error)
+			} else if !resultBody.Error.isEmpty() {
+				t.Errorf("Expected error to be nil, found %+v", resultBody.Error)
+			}
+
+			for header, expected := range tc.expectedHeader {
+				actual := w.Header().Get(header)
+				assert.Equal(t, expected, actual)
+			}
 		})
 	}
 }
@@ -540,19 +862,26 @@ func TestBookService_UpdateBook(t *testing.T) {
 		testName       string
 		mockFunc       func()
 		service        BookService
-		requestBody    string
+		requestBody    *entity.Book
 		method         string
 		params         []gin.Param
 		url            string
 		expectedStatus int
-		expectedBody   string
+		expectedBody   *entity.Book
+		expectedError  expectedErrors
+		expectedHeader map[string]string
 	}{
 		{
 			testName: "Test Successful",
 			mockFunc: func() {
-				mock.ExpectExec(regexp.QuoteMeta(queryUpdateBook)).WithArgs(1, "Test 2", "Test 2", 2, "Test 2").WillReturnResult(sqlmock.NewResult(0, 1))
+				mock.ExpectExec(regexp.QuoteMeta(bookdb.QueryUpdateBook)).WithArgs(1, "Test 2", "Test 2", 2, "Test 2").WillReturnResult(sqlmock.NewResult(0, 1))
 			},
-			requestBody: "{\"title\":\"Test 2\",\"author\":\"Test 2\",\"year\":2,\"description\":\"Test 2\"}",
+			requestBody: &entity.Book{
+				Title:       "Test 2",
+				Author:      "Test 2",
+				Year:        2,
+				Description: "Test 2",
+			},
 			service:     repo,
 			url:         updateURL,
 			method:      updateMethod,
@@ -563,11 +892,24 @@ func TestBookService_UpdateBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   "{\"id\":1,\"title\":\"Test 2\",\"author\":\"Test 2\",\"year\":2,\"description\":\"Test 2\"}",
+			expectedBody:   &entity.Book{
+				Title:       "Test 2",
+				Author:      "Test 2",
+				Year:        2,
+				Description: "Test 2",
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName:    "Test Unsuccessful: Invalid serial",
-			requestBody: "{\"title\":\"Test 2\",\"author\":\"Test 2\",\"year\":2,\"description\":\"Test 2\"}",
+			requestBody: &entity.Book{
+				Title:       "Test 2",
+				Author:      "Test 2",
+				Year:        2,
+				Description: "Test 2",
+			},
 			service:     repo,
 			url:         updateURL,
 			method:      updateMethod,
@@ -578,7 +920,12 @@ func TestBookService_UpdateBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
+			expectedError: expectedErrors{
+				Msg:    errors.NewBookInvalidSerial().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName:       "Test Unsuccessful: Empty serial",
@@ -586,11 +933,19 @@ func TestBookService_UpdateBook(t *testing.T) {
 			url:            updateURL,
 			method:         updateMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
+			expectedError: expectedErrors{
+				Msg:   errors.NewBookInvalidSerial().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName:    "Test Unsuccessful: Invalid request body",
-			requestBody: "{\"title\":\"\",\"author\":\"Test 2\",\"year\":2,\"description\":\"Test 2\"}",
+			requestBody: &entity.Book{
+				Author:      "Test 2",
+				Description: "Test 2",
+			},
 			service:     repo,
 			url:         updateURL,
 			method:      updateMethod,
@@ -601,7 +956,15 @@ func TestBookService_UpdateBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Invalid request body: Title cannot be empty\"}",
+			expectedError: expectedErrors{
+				Fields: []common_translators.FieldError{
+					validators.FieldTitleEmpty,
+					validators.FieldYearEmpty,
+				},
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: Empty request body",
@@ -615,15 +978,26 @@ func TestBookService_UpdateBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Expected body, found EOF\"}",
+			expectedError: expectedErrors{
+				Msg:   errors.NewBookEmptyBody().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 	}
 
 	for _, tc := range UpdateBookServiceMocks {
 		t.Run(tc.testName, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(tc.method, tc.url, strings.NewReader(tc.requestBody))
-			fmt.Println(req)
+
+			var jsonRequest []byte = nil
+
+			if tc.requestBody != nil {
+				jsonRequest, _ = json.Marshal(tc.requestBody)
+			}
+
+			req, _ := http.NewRequest(tc.method, tc.url, bytes.NewReader(jsonRequest))
 			c, _ := gin.CreateTestContext(w)
 			c.Request = req
 			c.Params = tc.params
@@ -635,7 +1009,32 @@ func TestBookService_UpdateBook(t *testing.T) {
 			tc.service.UpdateBook(c)
 
 			assert.Equal(t, tc.expectedStatus, w.Code)
-			assert.Equal(t, tc.expectedBody, w.Body.String())
+
+			body, err := ioutil.ReadAll(w.Body)
+			if err != nil {
+				t.Errorf("Could not read the body: %v", err)
+			}
+			resultBody := singleResponse{}
+
+			if err = json.Unmarshal(body, &resultBody); err != nil {
+				t.Errorf("Unable to unmarshal the body")
+			}
+
+			if tc.expectedBody != nil {
+				assert.True(t, tc.expectedBody.EqualNoID(*resultBody.Data), "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedBody, resultBody.Data)
+			} else if resultBody.Data != nil {
+				t.Errorf("Expected result body to be nil, found %+v", resultBody.Data)
+			}
+			if !tc.expectedError.isEmpty() {
+				assert.Equal(t, tc.expectedError, resultBody.Error, "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedError, resultBody.Error)
+			} else if !resultBody.Error.isEmpty() {
+				t.Errorf("Expected error to be nil, found %+v", resultBody.Error)
+			}
+
+			for header, expected := range tc.expectedHeader {
+				actual := w.Header().Get(header)
+				assert.Equal(t, expected, actual)
+			}
 		})
 	}
 }
@@ -657,12 +1056,13 @@ func TestBookService_DeleteBook(t *testing.T) {
 		url            string
 		params         []gin.Param
 		expectedStatus int
-		expectedBody   string
+		expectedError  expectedErrors
+		expectedHeader map[string]string
 	}{
 		{
 			testName: "Test Successful",
 			mockFunc: func() {
-				mock.ExpectExec(regexp.QuoteMeta(queryDeleteBook)).WithArgs(1).WillReturnResult(sqlmock.NewResult(0, 1))
+				mock.ExpectExec(regexp.QuoteMeta(bookdb.QueryDeleteBook)).WithArgs(1).WillReturnResult(sqlmock.NewResult(0, 1))
 			},
 			service: repo,
 			url:     deleteUrl,
@@ -674,11 +1074,14 @@ func TestBookService_DeleteBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusOK,
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: Book(s) not found",
 			mockFunc: func() {
-				mock.ExpectExec(regexp.QuoteMeta(queryDeleteBook)).WithArgs(1).WillReturnResult(sqlmock.NewResult(0, 0))
+				mock.ExpectExec(regexp.QuoteMeta(bookdb.QueryDeleteBook)).WithArgs(1).WillReturnResult(sqlmock.NewResult(0, 0))
 			},
 			service: repo,
 			url:     deleteUrl,
@@ -690,7 +1093,12 @@ func TestBookService_DeleteBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusNotFound,
-			expectedBody:   "{\"error:\":\"Book(s) not found in db\"}",
+			expectedError: expectedErrors{
+				Msg:    errors.NewBooksNotFound().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: Invalid serial",
@@ -704,7 +1112,12 @@ func TestBookService_DeleteBook(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
+			expectedError: expectedErrors{
+				Msg:    errors.NewBookInvalidSerial().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName:       "Test Unsuccessful: Empty serial",
@@ -712,7 +1125,12 @@ func TestBookService_DeleteBook(t *testing.T) {
 			url:            deleteUrl,
 			method:         deleteMethod,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "{\"error:\":\"Invalid serial. Serial must be more than 1\"}",
+			expectedError: expectedErrors{
+				Msg:    errors.NewBookInvalidSerial().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 	}
 
@@ -731,7 +1149,11 @@ func TestBookService_DeleteBook(t *testing.T) {
 			tc.service.DeleteBook(c)
 
 			assert.Equal(t, tc.expectedStatus, w.Code)
-			assert.Equal(t, tc.expectedBody, w.Body.String())
+
+			for header, expected := range tc.expectedHeader {
+				actual := w.Header().Get(header)
+				assert.Equal(t, expected, actual)
+			}
 		})
 	}
 }
@@ -752,29 +1174,39 @@ func TestBookService_DeleteAllBooks(t *testing.T) {
 		method         string
 		url            string
 		expectedStatus int
-		expectedBody   string
+		expectedBody   int
+		expectedError  expectedErrors
+		expectedHeader map[string]string
 	}{
 		{
 			testName: "Test Successful",
 			mockFunc: func() {
-				mock.ExpectExec(regexp.QuoteMeta(queryDeleteAllBooksAndAlter)).WillReturnResult(sqlmock.NewResult(0, 4))
+				mock.ExpectExec(regexp.QuoteMeta(bookdb.QueryDeleteAllBooksAndAlter)).WillReturnResult(sqlmock.NewResult(0, 4))
 			},
 			service:        repo,
 			url:            deleteAllURL,
 			method:         deleteAllMethod,
 			expectedStatus: http.StatusOK,
-			expectedBody:   "{\"Deleted rows\":4}",
+			expectedBody:   4,
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: Book(s) not found",
 			mockFunc: func() {
-				mock.ExpectExec(regexp.QuoteMeta(queryDeleteAllBooksAndAlter)).WillReturnResult(sqlmock.NewResult(0, 0))
+				mock.ExpectExec(regexp.QuoteMeta(bookdb.QueryDeleteAllBooksAndAlter)).WillReturnResult(sqlmock.NewResult(0, 0))
 			},
 			service:        repo,
 			url:            deleteAllURL,
 			method:         deleteAllMethod,
 			expectedStatus: http.StatusNotFound,
-			expectedBody:   "{\"error:\":\"Book(s) not found in db\"}",
+			expectedError: expectedErrors{
+				Msg: errors.NewBooksNotFound().Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 		{
 			testName: "Test Unsuccessful: DB is closed",
@@ -785,7 +1217,12 @@ func TestBookService_DeleteAllBooks(t *testing.T) {
 			url:            deleteAllURL,
 			method:         deleteAllMethod,
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "{\"error:\":\"Could not execute query: sql: database is closed\"}",
+			expectedError: expectedErrors{
+				Msg: errors.NewBookCouldNotQuery("sql: database is closed").Error(),
+			},
+			expectedHeader: map[string]string{
+				"Content-Type": "application/json; charset=utf-8",
+			},
 		},
 	}
 
@@ -802,12 +1239,30 @@ func TestBookService_DeleteAllBooks(t *testing.T) {
 
 			tc.service.DeleteAllBooks(c)
 
+			body, err := ioutil.ReadAll(w.Body)
+			if err != nil {
+				t.Errorf("Could not read the body: %v", err)
+			}
+			resultBody := &rowsResponse{}
+
+			if err = json.Unmarshal(body, &resultBody); err != nil {
+				t.Errorf("Unable to unmarshal the body")
+			}
+
 			assert.Equal(t, tc.expectedStatus, w.Code)
-			assert.Equal(t, tc.expectedBody, w.Body.String())
+
+			assert.Equal(t, tc.expectedBody, resultBody.Data)
+
+			if !tc.expectedError.isEmpty() {
+				assert.Equal(t, tc.expectedError, resultBody.Error, "Values are not equal:\nExpected: %+v\nActual: %+v", tc.expectedError, resultBody.Error)
+			} else if !resultBody.Error.isEmpty() {
+				t.Errorf("Expected error to be nil, found %+v", resultBody.Error)
+			}
+
+			for header, expected := range tc.expectedHeader {
+				actual := w.Header().Get(header)
+				assert.Equal(t, expected, actual)
+			}
 		})
 	}
 }
-
-/*
-Actual, expected in response
- */

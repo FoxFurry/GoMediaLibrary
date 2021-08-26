@@ -2,7 +2,7 @@ tests:
 	@docker-compose -f docker-compose-test.yaml up --build --abort-on-container-exit
 	@docker image prune -f
 	@docker-compose -f docker-compose-test.yaml down --volumes
-	@docker-compose rm -fsv
+#	@docker-compose rm -fsv
 
 ## Run Integration Test
 ## Note: This command is intended to be executed within docker env

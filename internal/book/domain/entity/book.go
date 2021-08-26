@@ -1,7 +1,7 @@
 package entity
 
 type Book struct {
-	ID          uint64 `json:"id,omitempty" binding:"omitempty,validID"`
+	ID          uint64 `json:"id,omitempty" binding:"omitempty,numeric,validID"`
 	Title       string `json:"title" binding:"required"`
 	Author      string `json:"author" binding:"required"`
 	Year        int    `json:"year" binding:"required,validYear"`
