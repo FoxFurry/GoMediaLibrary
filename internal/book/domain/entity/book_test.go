@@ -1,7 +1,7 @@
 package entity
 
 import (
-	"github.com/foxfurry/simple-rest/internal/book/http/validators"
+	"github.com/foxfurry/medialib/internal/book/http/validators"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/stretchr/testify/assert"
 	"testing"

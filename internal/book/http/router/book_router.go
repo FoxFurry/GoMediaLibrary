@@ -2,8 +2,8 @@ package router
 
 import (
 	"database/sql"
-	"github.com/foxfurry/simple-rest/internal/book/http/controllers"
-	"github.com/foxfurry/simple-rest/internal/book/http/validators"
+	"github.com/foxfurry/medialib/internal/book/http/controllers"
+	"github.com/foxfurry/medialib/internal/book/http/validators"
 	"github.com/gin-gonic/gin"
 )
 

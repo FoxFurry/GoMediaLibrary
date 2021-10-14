@@ -2,7 +2,7 @@ package validators
 
 import (
 	"fmt"
-	"github.com/foxfurry/simple-rest/internal/common/server/common_translators"
+	"github.com/foxfurry/medialib/internal/common/server/common_translators"
 	"github.com/gin-gonic/gin/binding"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"

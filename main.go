@@ -1,13 +1,15 @@
 package main
 
 import (
-	"github.com/foxfurry/simple-rest/app"
-	"github.com/foxfurry/simple-rest/configs"
+	"github.com/foxfurry/medialib/app"
+	"github.com/foxfurry/medialib/configs"
 )
 
-// Do I need to explain this?
-func main() {
+func init() {
 	configs.LoadConfig()
+}
+
+func main() {
 	server := app.NewApp()
 	server.Start()
 }

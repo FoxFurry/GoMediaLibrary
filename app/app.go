@@ -2,8 +2,8 @@ package app
 
 import (
 	"database/sql"
-	"github.com/foxfurry/simple-rest/internal/book/http/router"
-	dbpool "github.com/foxfurry/simple-rest/internal/common/database"
+	"github.com/foxfurry/medialib/internal/book/http/router"
+	dbpool "github.com/foxfurry/medialib/internal/common/database"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -11,23 +11,22 @@ import (
 	"github.com/spf13/viper"
 )
 
-// app structure is the core of the project.
+type IApp interface {
+	Start()
+}
+
+// mediaApp structure is the core of the project.
 // It embeds http server and provides router and database instances
-type app struct {
+type mediaApp struct {
 	*http.Server
 	Router   *gin.Engine
 	Database *sql.DB
 }
 
-// Start allows app to serve a http server on port from environment
-func (a *app) Start() {
-	log.Fatal(http.ListenAndServe(viper.GetString("server.port"), a.Router))
-}
-
-// NewApp returns an instance of app with configured router and database.
+// NewApp returns an instance of mediaApp with configured router and database.
 // Configuration is loaded from viper environment
-func NewApp() *app {
-	newApp := &app{
+func NewApp() IApp {
+	newApp := &mediaApp{
 		Router: gin.New(),
 		Database: dbpool.CreateDBPool(
 			viper.GetString("Database.host"),
@@ -46,8 +45,8 @@ func NewApp() *app {
 	return newApp
 }
 
-func NewTestApp() *app {
-	newApp := &app{
+func NewTestApp() IApp {
+	newApp := &mediaApp{
 		Router: gin.New(),
 		Database: dbpool.CreateDBPool(
 			viper.GetString("database_test.host"),
@@ -65,3 +64,10 @@ func NewTestApp() *app {
 
 	return newApp
 }
+
+// Start allows mediaApp to serve a http server on port from environment
+func (a *mediaApp) Start() {
+	log.Fatal(http.ListenAndServe(viper.GetString("server.port"), a.Router))
+}
+
+

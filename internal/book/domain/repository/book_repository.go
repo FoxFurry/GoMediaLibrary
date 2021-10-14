@@ -1,6 +1,6 @@
 package repository
 
-import "github.com/foxfurry/simple-rest/internal/book/domain/entity"
+import "github.com/foxfurry/medialib/internal/book/domain/entity"
 
 type BookRepository interface {
 	SaveBook(*entity.Book) (*entity.Book, error)

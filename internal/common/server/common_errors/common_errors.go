@@ -1,7 +1,7 @@
 package common_errors
 
 import (
-	common_response "github.com/foxfurry/simple-rest/internal/common/server/common_response"
+	common_response "github.com/foxfurry/medialib/internal/common/server/common_response"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )

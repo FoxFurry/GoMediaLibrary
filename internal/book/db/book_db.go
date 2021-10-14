@@ -2,11 +2,11 @@ package db
 
 import (
 	"database/sql"
-	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
-	"github.com/foxfurry/simple-rest/internal/book/domain/repository"
-	"github.com/foxfurry/simple-rest/internal/book/http/errors"
-	"github.com/foxfurry/simple-rest/internal/book/http/validators"
-	ct "github.com/foxfurry/simple-rest/internal/common/server/common_translators"
+	"github.com/foxfurry/medialib/internal/book/domain/entity"
+	"github.com/foxfurry/medialib/internal/book/domain/repository"
+	"github.com/foxfurry/medialib/internal/book/http/errors"
+	"github.com/foxfurry/medialib/internal/book/http/validators"
+	ct "github.com/foxfurry/medialib/internal/common/server/common_translators"
 	"log"
 )
 

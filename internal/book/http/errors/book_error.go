@@ -3,8 +3,8 @@ package errors
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/foxfurry/simple-rest/internal/common/server/common_errors"
-	validator "github.com/foxfurry/simple-rest/internal/common/server/common_translators"
+	"github.com/foxfurry/medialib/internal/common/server/common_errors"
+	validator "github.com/foxfurry/medialib/internal/common/server/common_translators"
 	"github.com/gin-gonic/gin"
 	"log"
 )

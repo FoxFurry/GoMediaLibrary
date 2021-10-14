@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"database/sql"
-	bookDB "github.com/foxfurry/simple-rest/internal/book/db"
-	"github.com/foxfurry/simple-rest/internal/book/domain/entity"
-	"github.com/foxfurry/simple-rest/internal/book/http/errors"
-	"github.com/foxfurry/simple-rest/internal/common/server/common_response"
-	"github.com/foxfurry/simple-rest/internal/common/server/common_translators"
+	bookDB "github.com/foxfurry/medialib/internal/book/db"
+	"github.com/foxfurry/medialib/internal/book/domain/entity"
+	"github.com/foxfurry/medialib/internal/book/http/errors"
+	"github.com/foxfurry/medialib/internal/common/server/common_response"
+	"github.com/foxfurry/medialib/internal/common/server/common_translators"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
