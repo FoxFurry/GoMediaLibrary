@@ -1,4 +1,4 @@
-package common_translators
+package translator
 
 import (
 	"fmt"
@@ -21,14 +21,7 @@ func (f FieldError) Error() string {
 	return fmt.Sprintf("field: %v, msg: %v", f.Field, f.Msg)
 }
 
-func CreateFieldError(field string, msg string) FieldError {
-	return FieldError{
-		Field: field,
-		Msg:   msg,
-	}
-}
-
-func GetTranslator() ut.Translator {
+func GetInstance() ut.Translator {
 	once.Do(func() {
 		trsEntity := en.New()
 		uni := ut.New(trsEntity, trsEntity)
@@ -44,7 +37,7 @@ func GetTranslator() ut.Translator {
 }
 
 func Translate(validatorError error) []FieldError {
-	translator := GetTranslator()
+	translator := GetInstance()
 
 	errArray, ok := validatorError.(validator.ValidationErrors)
 	if !ok {

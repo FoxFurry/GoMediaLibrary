@@ -16,7 +16,6 @@ func ifDBExists(db *sql.DB, dbname string) bool {
 	row := db.QueryRow(queryCheckExists, dbname)
 
 	var status bool
-
 	err := row.Scan(&status)
 
 	if err != nil {
@@ -55,9 +54,9 @@ func createBookstore(db *sql.DB) {
 	}
 }
 
-// CreateDBPool returns database connection pool with specified parameters. Function will validate database and tables
+// Create returns database connection pool with specified parameters. Function will validate database and tables
 // before returning the instance
-func CreateDBPool(host string, port int, user string, pass string, dbname string, dbMaxIdleConns int, dbMaxOpenConns int, dbMaxIdleTime time.Duration) *sql.DB {
+func Create(host string, port int, user string, pass string, dbname string, dbMaxIdleConns int, dbMaxOpenConns int, dbMaxIdleTime time.Duration) *sql.DB {
 	log.Printf("DB configs:\nHost: %v\nPort: %v\nUser: %v\ndbName: %v\nMax idle conns: %v\nMax open conns: %v\nMax idle time: %v",
 		host, port, user, dbname, dbMaxIdleConns, dbMaxOpenConns, dbMaxIdleTime)
 

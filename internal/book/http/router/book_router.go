@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterBookRoutes(router *gin.Engine, db *sql.DB) {
-	bookRepo := controllers.NewBookService(db)
+func RegisterBook(router *gin.Engine, db *sql.DB) {
+	bookRepo := controllers.NewBookController(db)
 
 	book := router.Group("/book")
 	{

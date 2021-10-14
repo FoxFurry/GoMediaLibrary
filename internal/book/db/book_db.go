@@ -6,7 +6,7 @@ import (
 	"github.com/foxfurry/medialib/internal/book/domain/repository"
 	"github.com/foxfurry/medialib/internal/book/http/errors"
 	"github.com/foxfurry/medialib/internal/book/http/validators"
-	ct "github.com/foxfurry/medialib/internal/common/server/common_translators"
+	ct "github.com/foxfurry/medialib/internal/common/server/translator"
 	"log"
 )
 
@@ -104,6 +104,7 @@ func (r *BookDBRepository) SearchByAuthor(author string) ([]entity.Book, error) 
 		log.Printf("Author field is empty")
 		return nil, errors.NewBookValidatorError([]ct.FieldError{validators.FieldAuthorEmpty})
 	}
+
 	rows, err := r.database.Query(QuerySearchByAuthorBook, author)
 
 	if err != nil {

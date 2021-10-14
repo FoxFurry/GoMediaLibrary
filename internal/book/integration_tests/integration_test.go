@@ -8,7 +8,7 @@ import (
 	"github.com/foxfurry/medialib/internal/book/domain/entity"
 	"github.com/foxfurry/medialib/internal/book/http/errors"
 	"github.com/foxfurry/medialib/internal/book/http/validators"
-	"github.com/foxfurry/medialib/internal/common/server/common_translators"
+	"github.com/foxfurry/medialib/internal/common/server/translator"
 	_ "github.com/foxfurry/medialib/internal/common/tests"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -22,8 +22,8 @@ import (
 var baseURL = "http://localhost:8080/book"
 
 type expectedErrors struct {
-	Msg    string                          `json:"msg,omitempty"`
-	Fields []common_translators.FieldError `json:"fields,omitempty"`
+	Msg    string                  `json:"msg,omitempty"`
+	Fields []translator.FieldError `json:"fields,omitempty"`
 }
 
 type singleResponse struct {
@@ -111,7 +111,7 @@ func TestSaveBook(t *testing.T) {
 			requestURL:     saveURL,
 			expectedStatus: 400,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldTitleEmpty,
 				},
 			},
@@ -130,7 +130,7 @@ func TestSaveBook(t *testing.T) {
 			requestURL:     saveURL,
 			expectedStatus: 400,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldAuthorEmpty,
 				},
 			},
@@ -149,7 +149,7 @@ func TestSaveBook(t *testing.T) {
 			requestURL:     saveURL,
 			expectedStatus: 400,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldYearEmpty,
 				},
 			},
@@ -167,7 +167,7 @@ func TestSaveBook(t *testing.T) {
 			requestURL:     saveURL,
 			expectedStatus: 400,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldTitleEmpty,
 					validators.FieldAuthorEmpty,
 				},
@@ -186,7 +186,7 @@ func TestSaveBook(t *testing.T) {
 			requestURL:     saveURL,
 			expectedStatus: 400,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldTitleEmpty,
 					validators.FieldYearEmpty,
 				},
@@ -205,7 +205,7 @@ func TestSaveBook(t *testing.T) {
 			requestURL:     saveURL,
 			expectedStatus: 400,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldAuthorEmpty,
 					validators.FieldYearEmpty,
 				},
@@ -221,7 +221,7 @@ func TestSaveBook(t *testing.T) {
 			requestURL:     saveURL,
 			expectedStatus: 400,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldTitleEmpty,
 					validators.FieldAuthorEmpty,
 					validators.FieldYearEmpty,
@@ -243,7 +243,7 @@ func TestSaveBook(t *testing.T) {
 			requestURL:     saveURL,
 			expectedStatus: 400,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldYearInvalid,
 				},
 			},
@@ -730,7 +730,7 @@ func TestSearchByAuthorBook(t *testing.T) {
 			requestAuthor:  "",
 			expectedStatus: 400,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldAuthorEmpty,
 				},
 			},

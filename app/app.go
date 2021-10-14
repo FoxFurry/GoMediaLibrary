@@ -18,7 +18,7 @@ type IApp interface {
 // mediaApp structure is the core of the project.
 // It embeds http server and provides router and database instances
 type mediaApp struct {
-	*http.Server
+	server *http.Server
 	Router   *gin.Engine
 	Database *sql.DB
 }
@@ -28,7 +28,7 @@ type mediaApp struct {
 func NewApp() IApp {
 	newApp := &mediaApp{
 		Router: gin.New(),
-		Database: dbpool.CreateDBPool(
+		Database: dbpool.Create(
 			viper.GetString("Database.host"),
 			viper.GetInt("Database.port"),
 			viper.GetString("Database.user"),
@@ -40,7 +40,7 @@ func NewApp() IApp {
 		),
 	}
 
-	router.RegisterBookRoutes(newApp.Router, newApp.Database)
+	router.RegisterBook(newApp.Router, newApp.Database)
 
 	return newApp
 }
@@ -48,7 +48,7 @@ func NewApp() IApp {
 func NewTestApp() IApp {
 	newApp := &mediaApp{
 		Router: gin.New(),
-		Database: dbpool.CreateDBPool(
+		Database: dbpool.Create(
 			viper.GetString("database_test.host"),
 			viper.GetInt("database_test.port"),
 			viper.GetString("database_test.user"),
@@ -60,7 +60,7 @@ func NewTestApp() IApp {
 		),
 	}
 
-	router.RegisterBookRoutes(newApp.Router, newApp.Database)
+	router.RegisterBook(newApp.Router, newApp.Database)
 
 	return newApp
 }

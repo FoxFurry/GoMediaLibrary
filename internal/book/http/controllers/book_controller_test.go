@@ -9,7 +9,7 @@ import (
 	"github.com/foxfurry/medialib/internal/book/domain/entity"
 	"github.com/foxfurry/medialib/internal/book/http/errors"
 	"github.com/foxfurry/medialib/internal/book/http/validators"
-	"github.com/foxfurry/medialib/internal/common/server/common_translators"
+	"github.com/foxfurry/medialib/internal/common/server/translator"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -21,8 +21,8 @@ import (
 )
 
 type expectedErrors struct {
-	Msg    string                          `json:"msg,omitempty"`
-	Fields []common_translators.FieldError `json:"fields,omitempty"`
+	Msg    string                  `json:"msg,omitempty"`
+	Fields []translator.FieldError `json:"fields,omitempty"`
 }
 
 type singleResponse struct {
@@ -61,7 +61,7 @@ func TestBookService_SaveBook(t *testing.T) {
 	db, mock := newMock()
 	defer db.Close()
 
-	repo := NewBookService(db)
+	repo := NewBookController(db)
 
 	saveUrl := "/book"
 	saveMethod := "POST"
@@ -116,7 +116,7 @@ func TestBookService_SaveBook(t *testing.T) {
 			method:         saveMethod,
 			expectedStatus: http.StatusBadRequest,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldTitleEmpty,
 				},
 			},
@@ -217,7 +217,7 @@ func TestBookService_GetBook(t *testing.T) {
 	db, mock := newMock()
 	defer db.Close()
 
-	repo := NewBookService(db)
+	repo := NewBookController(db)
 
 	getMethod := "GET"
 	getURL := "/book"
@@ -388,7 +388,7 @@ func TestBookService_GetAllBooks(t *testing.T) {
 	db, mock := newMock()
 	defer db.Close()
 
-	repo := NewBookService(db)
+	repo := NewBookController(db)
 
 	getAllMethod := "GET"
 	getAllURL := "/book"
@@ -525,7 +525,7 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 	db, mock := newMock()
 	defer db.Close()
 
-	repo := NewBookService(db)
+	repo := NewBookController(db)
 
 	searchAuthorMethod := "GET"
 	searchAuthorURL := "/book/author"
@@ -615,7 +615,7 @@ func TestBookService_SearchByAuthor(t *testing.T) {
 			method:         searchAuthorMethod,
 			expectedStatus: http.StatusBadRequest,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldAuthorEmpty,
 				},
 			},
@@ -695,7 +695,7 @@ func TestBookService_SearchByTitle(t *testing.T) {
 	db, mock := newMock()
 	defer db.Close()
 
-	repo := NewBookService(db)
+	repo := NewBookController(db)
 
 	searchTitleMethod := "GET"
 	searchTitleURL := "/book/title"
@@ -775,7 +775,7 @@ func TestBookService_SearchByTitle(t *testing.T) {
 			},
 			expectedStatus: http.StatusBadRequest,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldTitleEmpty,
 				},
 			},
@@ -853,7 +853,7 @@ func TestBookService_UpdateBook(t *testing.T) {
 	db, mock := newMock()
 	defer db.Close()
 
-	repo := NewBookService(db)
+	repo := NewBookController(db)
 
 	updateMethod := "PUT"
 	updateURL := "/book"
@@ -957,7 +957,7 @@ func TestBookService_UpdateBook(t *testing.T) {
 			},
 			expectedStatus: http.StatusBadRequest,
 			expectedError: expectedErrors{
-				Fields: []common_translators.FieldError{
+				Fields: []translator.FieldError{
 					validators.FieldTitleEmpty,
 					validators.FieldYearEmpty,
 				},
@@ -1043,7 +1043,7 @@ func TestBookService_DeleteBook(t *testing.T) {
 	db, mock := newMock()
 	defer db.Close()
 
-	repo := NewBookService(db)
+	repo := NewBookController(db)
 
 	deleteMethod := "DELETE"
 	deleteUrl := "/book"
@@ -1162,7 +1162,7 @@ func TestBookService_DeleteAllBooks(t *testing.T) {
 	db, mock := newMock()
 	defer db.Close()
 
-	repo := NewBookService(db)
+	repo := NewBookController(db)
 
 	deleteAllMethod := "DELETE"
 	deleteAllURL := "/book"

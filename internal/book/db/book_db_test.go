@@ -7,7 +7,7 @@ import (
 	"github.com/foxfurry/medialib/internal/book/domain/entity"
 	"github.com/foxfurry/medialib/internal/book/http/errors"
 	"github.com/foxfurry/medialib/internal/book/http/validators"
-	ct "github.com/foxfurry/medialib/internal/common/server/common_translators"
+	ct "github.com/foxfurry/medialib/internal/common/server/translator"
 	_ "github.com/foxfurry/medialib/internal/common/tests"
 	"github.com/stretchr/testify/assert"
 	"log"

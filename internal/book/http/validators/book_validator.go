@@ -2,7 +2,7 @@ package validators
 
 import (
 	"fmt"
-	"github.com/foxfurry/medialib/internal/common/server/common_translators"
+	"github.com/foxfurry/medialib/internal/common/server/translator"
 	"github.com/gin-gonic/gin/binding"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
@@ -14,44 +14,45 @@ const (
 	idTag       = "validID"
 	yearTag     = "validYear"
 	requiredTag = "required"
-	emptyFieldMsg = "cannot be empty"
 )
 
 var(
+	emptyFieldMsg = "cannot be empty"
+	invalidIDMsg = "should be positive non-null number"
 	invalidYearMsg = fmt.Sprintf("Year should be between -868 and %v", time.Now().Year())
 
-	FieldTitleEmpty = common_translators.FieldError{
+	FieldTitleEmpty = translator.FieldError{
 		Field: "Title",
 		Msg:   "Title " + emptyFieldMsg,
 	}
-	FieldAuthorEmpty = common_translators.FieldError{
+	FieldAuthorEmpty = translator.FieldError{
 		Field: "Author",
 		Msg:   "Author " + emptyFieldMsg,
 	}
-	FieldYearEmpty = common_translators.FieldError{
+	FieldYearEmpty = translator.FieldError{
 		Field: "Year",
 		Msg:   "Year " + emptyFieldMsg,
 	}
-	FieldYearInvalid = common_translators.FieldError{
+	FieldYearInvalid = translator.FieldError{
 		Field: "Year",
-		Msg:   fmt.Sprintf("Year should be between -868 and %v", time.Now().Year()),
+		Msg:   invalidYearMsg,
 	}
 )
 
 var validID validator.Func = func(fl validator.FieldLevel) bool {
 	id := fl.Field().Int()
-	if id < 1 {
-		return false
+	if id >= 1 {
+		return true
 	}
-	return true
+	return false
 }
 
 var validYear validator.Func = func(fl validator.FieldLevel) bool {
 	year := fl.Field().Int()
-	if year > int64(time.Now().Year()) || year < -868 {
-		return false
+	if -868 <= year && year <= int64(time.Now().Year()) {
+		return true
 	}
-	return true
+	return false
 }
 
 var trslValidYear validator.RegisterTranslationsFunc = func(ut ut.Translator) error {
@@ -59,15 +60,15 @@ var trslValidYear validator.RegisterTranslationsFunc = func(ut ut.Translator) er
 }
 
 var trslValidID validator.RegisterTranslationsFunc = func(ut ut.Translator) error {
-	return ut.Add(idTag, "{0} should be positive non-null number", true)
+	return ut.Add(idTag, "{0} " + invalidIDMsg, true)
 }
 
 var requiredMessage validator.RegisterTranslationsFunc = func(ut ut.Translator) error {
-	return ut.Add(requiredTag, "{0} " +emptyFieldMsg, true)
+	return ut.Add(requiredTag, "{0} " + emptyFieldMsg, true)
 }
 
 func RegisterBookValidators() {
-	errTranslator := common_translators.GetTranslator()
+	errTranslator := translator.GetInstance()
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation(yearTag, validYear)
@@ -87,6 +88,6 @@ func RegisterBookValidators() {
 			return t
 		})
 	} else {
-		log.Panicf("Could not register common_translators: %v", ok)
+		log.Panicf("Could not register translator: %v", ok)
 	}
 }

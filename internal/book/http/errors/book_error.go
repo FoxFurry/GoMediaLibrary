@@ -3,50 +3,51 @@ package errors
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/foxfurry/medialib/internal/common/server/common_errors"
-	validator "github.com/foxfurry/medialib/internal/common/server/common_translators"
+	"github.com/foxfurry/medialib/internal/common/server/errors"
+	"github.com/foxfurry/medialib/internal/common/server/response"
+	validator "github.com/foxfurry/medialib/internal/common/server/translator"
 	"github.com/gin-gonic/gin"
 	"log"
 )
 
 type bookNotFoundByTitle struct {
-	common_errors.CommonError
+	errors.Common
 }
 
 type bookNotFoundByAuthor struct {
-	common_errors.CommonError
+	errors.Common
 }
 
 type booksNotFound struct{
-	common_errors.CommonError
+	errors.Common
 }
 
 type bookBadBody struct{
-	common_errors.CommonError
+	errors.Common
 }
 
 type bookBadScanOptions struct {
-	common_errors.CommonError
+	errors.Common
 }
 
 type bookTitleAlreadyExists struct{
-	common_errors.CommonError
+	errors.Common
 }
 
 type bookCouldNotQuery struct {
-	common_errors.CommonError
+	errors.Common
 }
 
 type bookInvalidSerial struct{
-	common_errors.CommonError
+	errors.Common
 }
 
 type bookUnexpectedError struct {
-	common_errors.CommonError
+	errors.Common
 }
 
 type bookEmptyBody struct{
-	common_errors.CommonError
+	errors.Common
 }
 
 type bookValidatorError struct {
@@ -55,55 +56,55 @@ type bookValidatorError struct {
 
 func NewBookNotFoundByTitle(title string) bookNotFoundByTitle {
 	return bookNotFoundByTitle{
-		common_errors.CommonError{Msg: fmt.Sprintf("Book(s) with title %v not found in db", title)},
+		errors.Common{Msg: fmt.Sprintf("Book(s) with title %v not found in db", title)},
 	}
 }
 
 func NewBookNotFoundByAuthor(author string) bookNotFoundByAuthor {
 	return bookNotFoundByAuthor{
-		common_errors.CommonError{Msg: fmt.Sprintf("Book(s) with author %v not found in db", author)},
+		errors.Common{Msg: fmt.Sprintf("Book(s) with author %v not found in db", author)},
 	}
 }
 
 func NewBooksNotFound() booksNotFound {
 	return booksNotFound{
-		common_errors.CommonError{Msg: "Book(s) not found in db"},
+		errors.Common{Msg: "Book(s) not found in db"},
 	}
 }
 
 func NewBookTitleAlreadyExists() bookTitleAlreadyExists {
 	return bookTitleAlreadyExists{
-		common_errors.CommonError{Msg: "Requested title already exists"},
+		errors.Common{Msg: "Requested title already exists"},
 	}
 }
 
 func NewBookBadScanOptions(msg string) bookBadScanOptions {
 	return bookBadScanOptions{
-		common_errors.CommonError{Msg: fmt.Sprintf("Bad SQL scan options: %v", msg)},
+		errors.Common{Msg: fmt.Sprintf("Bad SQL scan options: %v", msg)},
 	}
 }
 
 func NewBookCouldNotQuery(msg string) bookCouldNotQuery {
 	return bookCouldNotQuery{
-		common_errors.CommonError{Msg: fmt.Sprintf("Could not execute query: %v", msg)},
+		errors.Common{Msg: fmt.Sprintf("Could not execute query: %v", msg)},
 	}
 }
 
 func NewBookInvalidSerial() bookInvalidSerial {
 	return bookInvalidSerial{
-		common_errors.CommonError{Msg: "Invalid serial. Serial must be more than 1"},
+		errors.Common{Msg: "Invalid serial. Serial must be more than 1"},
 	}
 }
 
 func NewBookUnexpectedError(msg string) bookUnexpectedError {
 	return bookUnexpectedError{
-		common_errors.CommonError{Msg: fmt.Sprintf("Unexpected error: %v", msg)},
+		errors.Common{Msg: fmt.Sprintf("Unexpected error: %v", msg)},
 	}
 }
 
 func NewBookEmptyBody() bookEmptyBody {
 	return bookEmptyBody{
-		common_errors.CommonError{Msg: "Expected body, found EOF"},
+		errors.Common{Msg: "Expected body, found EOF"},
 	}
 }
 
@@ -126,14 +127,14 @@ func (b bookValidatorError) Error() string {
 func HandleBookError(c *gin.Context, err error) {
 	switch err.(type) {
 	case booksNotFound, bookNotFoundByAuthor, bookNotFoundByTitle:
-		common_errors.RespondNotFound(c, err)
+		response.NotFound(c, err)
 	case bookValidatorError, bookInvalidSerial, bookEmptyBody:
-		common_errors.RespondBadRequest(c, err)
+		response.BadRequest(c, err)
 	case bookTitleAlreadyExists:
-		common_errors.RespondAlreadyExists(c, err)
+		response.AlreadyExists(c, err)
 	case bookUnexpectedError, bookCouldNotQuery:
-		common_errors.RespondInternalError(c, err)
+		response.InternalError(c, err)
 	default:
-		common_errors.RespondInternalError(c, err)
+		response.InternalError(c, err)
 	}
 }

@@ -5,19 +5,22 @@ import (
 	bookDB "github.com/foxfurry/medialib/internal/book/db"
 	"github.com/foxfurry/medialib/internal/book/domain/entity"
 	"github.com/foxfurry/medialib/internal/book/http/errors"
-	"github.com/foxfurry/medialib/internal/common/server/common_response"
-	"github.com/foxfurry/medialib/internal/common/server/common_translators"
+	"github.com/foxfurry/medialib/internal/common/server/response"
+	"github.com/foxfurry/medialib/internal/common/server/translator"
 	"github.com/gin-gonic/gin"
 	"io"
-	"net/http"
 	"strconv"
 )
+
+type IService interface {
+
+}
 
 type BookService struct {
 	dbRepo bookDB.BookDBRepository
 }
 
-func NewBookService(db *sql.DB) BookService {
+func NewBookController(db *sql.DB) BookService {
 	return BookService{
 		dbRepo: bookDB.NewBookRepo(db),
 	}
@@ -31,7 +34,7 @@ func (b *BookService) SaveBook(c *gin.Context) {
 			errors.HandleBookError(c, errors.NewBookEmptyBody())
 			return
 		} else {
-			errors.HandleBookError(c, errors.NewBookValidatorError(common_translators.Translate(err)))
+			errors.HandleBookError(c, errors.NewBookValidatorError(translator.Translate(err)))
 			return
 		}
 	}
@@ -42,7 +45,7 @@ func (b *BookService) SaveBook(c *gin.Context) {
 		return
 	}
 
-	common_response.Respond(c, http.StatusOK, saveBook, nil)
+	response.OK(c, saveBook)
 }
 
 func (b *BookService) GetBook(c *gin.Context) {
@@ -60,7 +63,7 @@ func (b *BookService) GetBook(c *gin.Context) {
 		return
 	}
 
-	common_response.Respond(c, http.StatusOK, getBook, nil)
+	response.OK(c, getBook)
 }
 
 func (b *BookService) GetAllBooks(c *gin.Context) {
@@ -70,7 +73,7 @@ func (b *BookService) GetAllBooks(c *gin.Context) {
 		return
 	}
 
-	common_response.Respond(c, http.StatusOK, allBooks, nil)
+	response.OK(c, allBooks)
 }
 
 func (b *BookService) SearchByAuthor(c *gin.Context) {
@@ -82,7 +85,7 @@ func (b *BookService) SearchByAuthor(c *gin.Context) {
 		return
 	}
 
-	common_response.Respond(c, http.StatusOK, booksByAuthor, nil)
+	response.OK(c, booksByAuthor)
 }
 
 func (b *BookService) SearchByTitle(c *gin.Context) {
@@ -94,7 +97,7 @@ func (b *BookService) SearchByTitle(c *gin.Context) {
 		return
 	}
 
-	common_response.Respond(c, http.StatusOK, bookByTitle, nil)
+	response.OK(c, bookByTitle)
 }
 
 func (b *BookService) UpdateBook(c *gin.Context) {
@@ -113,7 +116,7 @@ func (b *BookService) UpdateBook(c *gin.Context) {
 			errors.HandleBookError(c, errors.NewBookEmptyBody())
 			return
 		} else {
-			errors.HandleBookError(c, errors.NewBookValidatorError(common_translators.Translate(err)))
+			errors.HandleBookError(c, errors.NewBookValidatorError(translator.Translate(err)))
 			return
 		}
 	}
@@ -124,7 +127,7 @@ func (b *BookService) UpdateBook(c *gin.Context) {
 		return
 	}
 
-	common_response.Respond(c, http.StatusOK, updatedBook, nil)
+	response.OK(c, updatedBook)
 }
 
 func (b *BookService) DeleteBook(c *gin.Context) {
@@ -142,7 +145,7 @@ func (b *BookService) DeleteBook(c *gin.Context) {
 		return
 	}
 
-	common_response.Respond(c, http.StatusOK, nil, nil)
+	response.OK(c, nil)
 }
 
 func (b *BookService) DeleteAllBooks(c *gin.Context) {
@@ -152,5 +155,5 @@ func (b *BookService) DeleteAllBooks(c *gin.Context) {
 		return
 	}
 
-	common_response.Respond(c, http.StatusOK, deletedRows, nil)
+	response.OK(c, deletedRows)
 }
