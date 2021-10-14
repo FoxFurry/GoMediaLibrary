@@ -1,4 +1,4 @@
-package common_errors
+package errors
 
 import (
 	common_response "github.com/foxfurry/medialib/internal/common/server/common_response"
